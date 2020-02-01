@@ -11,4 +11,5 @@ CORE_IMAGE_EXTRA_INSTALL_append = "\
     os-release \
     wpa-supplicant \
     iw \
+    i2c-tools \
     "
