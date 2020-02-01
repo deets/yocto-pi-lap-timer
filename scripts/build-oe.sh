@@ -134,11 +134,11 @@ def setup_layers(bakery):
     )
 
 
-def build_image(bakery, machine):
+def build_image(bakery, machine, image):
     bakery.run(
         [
             "bitbake",
-            "core-image-minimal",
+            image,
         ],
         extra_env=dict(
             MACHINE=machine,
@@ -179,7 +179,11 @@ def parse_args():
         choices=MACHINES,
         help="Which PI to build for."
     )
-
+    parser.add_argument(
+        "--image",
+        default="laptimer-image",
+        help="The image to build.",
+    )
     return parser.parse_args()
 
 
@@ -194,7 +198,7 @@ def main():
     oe_env = setup_oe_env(build)
     bakery = BitBakery(build, oe_env, opts)
     setup_layers(bakery)
-    build_image(bakery, opts.machine)
+    build_image(bakery, opts.machine, opts.image)
     logger.debug("%s", pprint.pformat(oe_env))
 
 
