@@ -1,0 +1,9 @@
+[submodule "layers/modules/bitbake"]
+	path = layers/modules/bitbake
+	url = git://git.openembedded.org/bitbake
+[submodule "layers/modules/meta-raspberrypi"]
+	path = layers/modules/meta-raspberrypi
+	url = https://github.com/agherzan/meta-raspberrypi.git
+[submodule "layers/modules/openembedded-core"]
+	path = layers/modules/openembedded-core
+	url = git://git.openembedded.org/openembedded-core
