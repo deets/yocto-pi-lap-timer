@@ -22,7 +22,15 @@ LAYERS = [
     str(LAYERS / "modules" / "meta-raspberrypi"),
     str(LAYERS / "meta-laptimer"),
 ]
-WHITELIST = ["SSTATE_DIR", "DL_DIR"]
+WHITELIST = (
+    "DL_DIR",
+    "SSTATE_DIR",
+    "KBUILD_BUILD_USER",
+    "KBUILD_BUILD_HOST",
+    "ABLETON_OS_HOSTNAME",
+    "DISTRO_VERSION",
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,6 +51,15 @@ def timed(description):
     return _d
 
 
+def git_describe():
+    return subprocess.run(
+        ["git", "describe", "--always"],
+        check=True,
+        stdout=subprocess.PIPE,
+        cwd=str(BASE),
+    ).stdout.decode("ascii").strip()
+
+
 class BitBakery:
 
     def __init__(self, build, oe_env, opts):
@@ -52,6 +69,8 @@ class BitBakery:
             self.whitelist_var(var)
         self._env["SSTATE_DIR"] = opts.shared_state
         self._env["DL_DIR"] = opts.dl_dir
+        self._env["DISTRO"] = "laptimer-os"
+        self._env["DISTRO_VERSION"] = git_describe()
         for d in (opts.shared_state, opts.dl_dir):
             p = pathlib.Path(d)
             p.mkdir(exist_ok=True)
