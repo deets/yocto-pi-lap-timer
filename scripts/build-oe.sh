@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -* mode: python -*-
 import os
-import pprint
+import sys
 import argparse
 import pathlib
 import time
@@ -93,6 +93,9 @@ class BitBakery:
             **kwargs,
         )
 
+    def shell(self):
+        pass
+
 
 def setup_oe_env(build):
     # prime the setupt script to
@@ -134,7 +137,8 @@ def setup_layers(bakery):
     )
 
 
-def build_image(bakery, machine, image):
+def build_image(bakery, opts):
+    machine, image = opts.machine, opts.image
     bakery.run(
         [
             "bitbake",
@@ -169,17 +173,21 @@ def parse_args():
         help="Package download dir"
     )
     parser.add_argument(
-        "--build",
-        default=str(BASE / "build"),
-        help="Where to build things in."
-    )
-    parser.add_argument(
         "--machine",
         default=MACHINES[0],
         choices=MACHINES,
         help="Which PI to build for."
     )
     parser.add_argument(
+        "--build-dir",
+        default=str(BASE / "build"),
+        help="Where to build things in."
+    )
+
+    subparsers = parser.add_subparsers(help='sub-command help')
+    parser_build = subparsers.add_parser('build', help='Build the image')
+    parser_build.set_defaults(func=build_image)
+    parser_build.add_argument(
         "--image",
         default="laptimer-image",
         help="The image to build.",
@@ -194,12 +202,19 @@ def main():
         level=logging.DEBUG if opts.verbose >= 1 else logging.INFO,
     )
 
-    build = pathlib.Path(opts.build).absolute().resolve()
+    try:
+        subcommand = opts.func
+    except AttributeError:
+        logging.error("Please specify a subcommand! "
+                      "Use -h to see the available ones.")
+        sys.exit(1)
+
+    build = pathlib.Path(opts.build_dir).absolute().resolve()
     oe_env = setup_oe_env(build)
     bakery = BitBakery(build, oe_env, opts)
     setup_layers(bakery)
-    build_image(bakery, opts.machine, opts.image)
-    logger.debug("%s", pprint.pformat(oe_env))
+
+    sys.exit(subcommand(bakery, opts))
 
 
 if __name__ == '__main__':
