@@ -2,12 +2,15 @@
 # -* mode: python -*-
 import os
 import sys
+import signal
 import argparse
 import pathlib
 import time
 import logging
 import subprocess
 from functools import wraps
+from contextlib import contextmanager
+from shutil import get_terminal_size
 
 MACHINES = [
     "raspberrypi3",
@@ -32,6 +35,19 @@ WHITELIST = (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# Borrowed from Pew.
+# See https://github.com/berdario/pew/blob/master/pew/_utils.py#L82
+@contextmanager
+def temp_environ():
+    """Allow the ability to set os.environ temporarily"""
+    environ = dict(os.environ)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(environ)
 
 
 def timed(description):
@@ -93,8 +109,8 @@ class BitBakery:
             **kwargs,
         )
 
-    def shell(self):
-        pass
+    def items(self):
+        return self._env.items()
 
 
 def setup_oe_env(build):
@@ -150,6 +166,48 @@ def build_image(bakery, opts):
     )
 
 
+def choose_shell():
+    from shellingham import detect_shell
+    return detect_shell()
+
+
+def bitbake_shell(bakery, opts):
+    # These imports are local so the dependencies
+    # are only needed if one really wants a shell
+    import pexpect
+    if "BITBAKE_SHELL_GUARD" in os.environ:
+        logging.error("Already in bitbake shell, please exit first.")
+
+    kind, command = choose_shell()
+    # Grab current terminal dimensions to replace the hardcoded default
+    # dimensions of pexpect.
+    dims = get_terminal_size()
+    with temp_environ():
+        for key, value in bakery.items():
+            os.environ[key] = value
+        os.environ["BITBAKE_SHELL_GUARD"] = "1"
+        os.environ["MACHINE"] = opts.machine
+        c = pexpect.spawn(
+            command,
+            ["-i"],
+            dimensions=(dims.lines, dims.columns),
+        )
+
+    # Handler for terminal resizing events
+    # Must be defined here to have the shell process in its context, since
+    # we can't pass it as an argument
+    def sigwinch_passthrough(sig, data):
+        dims = get_terminal_size()
+        c.setwinsize(dims.lines, dims.columns)
+
+    signal.signal(signal.SIGWINCH, sigwinch_passthrough)
+
+    # Interact with the new shell.
+    c.interact(escape_character=None)
+    c.close()
+    return c.exitstatus
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -192,6 +250,13 @@ def parse_args():
         default="laptimer-image",
         help="The image to build.",
     )
+
+    parser_shell = subparsers.add_parser(
+        'shell',
+        help='Open bitbake shell. This spawns a new shell '
+        'set up to run bitbake.'
+    )
+    parser_shell.set_defaults(func=bitbake_shell)
     return parser.parse_args()
 
 
