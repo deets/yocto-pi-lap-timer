@@ -32,12 +32,7 @@ def list_interfaces(wpas_obj):
         print(ifname)
 
 
-def propertiesChanged(properties):
-    if "State" in properties:
-        print("PropertiesChanged: State: %s" % (properties["State"]))
-
-
-def showBss(bss):
+def showBss(bss, bus):
     net_obj = bus.get_object(WPAS_DBUS_SERVICE, bss)
     net = dbus.Interface(net_obj, WPAS_DBUS_BSS_INTERFACE)
     # Convert the byte-array for SSID and BSSID to printable strings
@@ -74,67 +69,92 @@ def showBss(bss):
           (bssid, ssid, wpa, wpa2, signal, maxrate, freq))
 
 
-def scanDone(success):
-    print("Scan done: success=%s" % success)
+class WPASupplicant:
 
-    res = if_obj.Get(WPAS_DBUS_INTERFACES_INTERFACE, 'BSSs',
-                     dbus_interface=dbus.PROPERTIES_IFACE)
-    print("Scanned wireless networks:")
-    for opath in res:
-        print(opath)
-        showBss(opath)
+    def __init__(self, bus, ifname):
+        self._bus = bus
 
+        wpas_obj = bus.get_object(WPAS_DBUS_SERVICE, WPAS_DBUS_OPATH)
+        self._wpas = dbus.Interface(wpas_obj, WPAS_DBUS_INTERFACE)
 
-def bssAdded(bss, properties):
-    print("BSS added: %s" % (bss))
-    showBss(bss)
+        bus.add_signal_receiver(
+            self.scan_done,
+            dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
+            signal_name="ScanDone"
+        )
+        bus.add_signal_receiver(
+            self.bss_added,
+            dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
+            signal_name="BSSAdded"
+        )
+        bus.add_signal_receiver(
+            self.bss_removed,
+            dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
+            signal_name="BSSRemoved"
+        )
+        bus.add_signal_receiver(
+            self.properties_changed,
+            dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
+            signal_name="PropertiesChanged"
+        )
+        # See if wpa_supplicant already knows about this interface
+        path = None
+        try:
+            path = self._wpas.GetInterface(ifname)
+        except dbus.DBusException as exc:
+            if not str(exc).startswith(
+                            "fi.w1.wpa_supplicant1.InterfaceUnknown:"
+            ):
+                raise
+            try:
+                path = self._wpas.CreateInterface(
+                        {'Ifname': ifname, 'Driver': 'nl80211'}
+                )
+            except dbus.DBusException as exc:
+                if not str(exc).startswith(
+                                "fi.w1.wpa_supplicant1.InterfaceExists:"
+                ):
+                    raise
 
+        self._if_obj = bus.get_object(WPAS_DBUS_SERVICE, path)
+        self._iface = dbus.Interface(
+                self._if_obj,
+                WPAS_DBUS_INTERFACES_INTERFACE
+        )
 
-def bssRemoved(bss):
-    print("BSS removed: %s" % (bss))
+    def scan(self):
+        self._iface.Scan({'Type': 'active'})
+
+    def scan_done(self, success):
+        print("Scan done: success=%s" % success)
+
+        res = self._if_obj.Get(WPAS_DBUS_INTERFACES_INTERFACE, 'BSSs',
+                               dbus_interface=dbus.PROPERTIES_IFACE)
+        print("Scanned wireless networks:")
+        for opath in res:
+            print(opath)
+            showBss(opath, self._bus)
+
+    def bss_added(self, bss, properties):
+        print("BSS added: %s" % (bss))
+        showBss(bss, self._bus)
+
+    def bss_removed(self, bss):
+        print("BSS removed: %s" % (bss))
+
+    def properties_changed(self, properties):
+        if "State" in properties:
+            print("PropertiesChanged: State: %s" % (properties["State"]))
 
 
 def main():
+    # not entirely sure what this is good for
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-    global bus
     bus = dbus.SystemBus()
-    wpas_obj = bus.get_object(WPAS_DBUS_SERVICE, WPAS_DBUS_OPATH)
-    ifname = "wlan0"
-    wpas = dbus.Interface(wpas_obj, WPAS_DBUS_INTERFACE)
-
-    bus.add_signal_receiver(scanDone,
-                            dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
-                            signal_name="ScanDone")
-    bus.add_signal_receiver(bssAdded,
-                            dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
-                            signal_name="BSSAdded")
-    bus.add_signal_receiver(bssRemoved,
-                            dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
-                            signal_name="BSSRemoved")
-    bus.add_signal_receiver(propertiesChanged,
-                            dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
-                            signal_name="PropertiesChanged")
-
-    # See if wpa_supplicant already knows about this interface
-    path = None
-    try:
-        path = wpas.GetInterface(ifname)
-    except dbus.DBusException as exc:
-        if not str(exc).startswith("fi.w1.wpa_supplicant1.InterfaceUnknown:"):
-            raise exc
-        try:
-            path = wpas.CreateInterface({'Ifname': ifname, 'Driver': 'nl80211'})
-        except dbus.DBusException as exc:
-            if not str(exc).startswith("fi.w1.wpa_supplicant1.InterfaceExists:"):
-                raise exc
-    global if_obj
-    if_obj = bus.get_object(WPAS_DBUS_SERVICE, path)
-    global iface
-    iface = dbus.Interface(if_obj, WPAS_DBUS_INTERFACES_INTERFACE)
-    iface.Scan({'Type': 'active'})
+    wpa_supplicant = WPASupplicant(bus, "wlan0")
+    wpa_supplicant.scan()
     loop = GLib.MainLoop()
     loop.run()
-    wpas.RemoveInterface(dbus.ObjectPath(path))
 
 
 if __name__ == "__main__":
