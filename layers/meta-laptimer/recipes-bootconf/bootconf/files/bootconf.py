@@ -78,6 +78,13 @@ async def setup_network(ifname, hostname, network_config):
         await setup_ap(ifname, hostname, network_config)
 
 
+async def setup_hostname(hostname):
+    proc = await asyncio.create_subprocess_exec(
+        "hostname", hostname,
+    )
+    await proc.wait()
+
+
 def setup_mainloop():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     asyncio.set_event_loop_policy(asyncio_glib.GLibEventLoopPolicy())
@@ -96,6 +103,12 @@ def main():
     )
     logger.debug("config %r", config)
     loop = setup_mainloop()
+
+    loop.create_task(
+        setup_hostname(
+            safe_get(config, "hostname", default="fpv-laptimer")
+        )
+    )
     loop.create_task(
         setup_network(
             WIFI_INTERFACE,
