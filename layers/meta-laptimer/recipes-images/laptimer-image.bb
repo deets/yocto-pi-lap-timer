@@ -3,6 +3,10 @@ include recipes-core/images/core-image-base.bb
 
 SUMMARY = "A console-only minimal FPV laptimer image"
 
+RDEPENDS_append = "\
+    bootconf-bootfiles \
+    "
+
 CORE_IMAGE_EXTRA_INSTALL_append = "\
     avahi-daemon \
     dropbear \
