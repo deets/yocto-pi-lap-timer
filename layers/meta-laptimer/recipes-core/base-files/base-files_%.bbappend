@@ -3,6 +3,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI_append = " \
     file://root.profile\
     file://interfaces\
+    file://fstab.patch;patchdir=${WORKDIR}\
     "
 
 do_install_append () {
