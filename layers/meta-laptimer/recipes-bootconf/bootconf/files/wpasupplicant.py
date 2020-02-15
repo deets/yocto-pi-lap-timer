@@ -32,9 +32,8 @@ def list_interfaces(wpas_obj):
         print(ifname)
 
 
-def showBss(bss, bus):
+def show_bss(bss, bus):
     net_obj = bus.get_object(WPAS_DBUS_SERVICE, bss)
-    net = dbus.Interface(net_obj, WPAS_DBUS_BSS_INTERFACE)
     # Convert the byte-array for SSID and BSSID to printable strings
     val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'BSSID',
                       dbus_interface=dbus.PROPERTIES_IFACE)
@@ -133,11 +132,11 @@ class WPASupplicant:
         print("Scanned wireless networks:")
         for opath in res:
             print(opath)
-            showBss(opath, self._bus)
+            show_bss(opath, self._bus)
 
     def bss_added(self, bss, properties):
         print("BSS added: %s" % (bss))
-        showBss(bss, self._bus)
+        show_bss(bss, self._bus)
 
     def bss_removed(self, bss):
         print("BSS removed: %s" % (bss))
@@ -146,6 +145,18 @@ class WPASupplicant:
         if "State" in properties:
             print("PropertiesChanged: State: %s" % (properties["State"]))
 
+    def run_access_point(self, ssid, frequency):
+        key_mgmt = "NONE"
+        args = {
+            'ssid': ssid,
+            'key_mgmt': key_mgmt,
+            'mode': 2,
+            'frequency': frequency
+        }
+
+        netw = self._iface.AddNetwork(args)
+        self._iface.SelectNetwork(netw)
+
 
 def main():
     # not entirely sure what this is good for
@@ -153,6 +164,9 @@ def main():
     bus = dbus.SystemBus()
     wpa_supplicant = WPASupplicant(bus, "wlan0")
     wpa_supplicant.scan()
+    ssid = "TEST_WPA_DBUS_HOTSPOT"
+    frequency = 2412
+    wpa_supplicant.run_access_point(ssid, frequency)
     loop = GLib.MainLoop()
     loop.run()
 
