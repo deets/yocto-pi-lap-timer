@@ -1,0 +1,11 @@
+--- a/defconfig        2020-02-01 18:10:40.799647066 +0100
++++ b/defconfig      2020-02-15 17:36:05.349007164 +0100
+@@ -1022,7 +1022,7 @@
+ # CONFIG_LSOF is not set
+ # CONFIG_MPSTAT is not set
+ # CONFIG_NMETER is not set
+-# CONFIG_PGREP is not set
++CONFIG_PGREP=y
+ # CONFIG_PKILL is not set
+ CONFIG_PIDOF=y
+ # CONFIG_FEATURE_PIDOF_SINGLE is not set
