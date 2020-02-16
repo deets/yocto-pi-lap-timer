@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import os
 import ast
 import argparse
 import logging
@@ -7,6 +8,7 @@ import asyncio_glib
 import dbus.mainloop.glib
 import pathlib
 import wpasupplicant
+import stat
 
 logger = logging.getLogger("bootconf")
 
@@ -15,6 +17,7 @@ WIFI_INTERFACE = "wlan0"
 UDHCPD_CONF_FILENAME = pathlib.Path("/etc/udhcpd.conf")
 assert UDHCPD_CONF_FILENAME.exists()
 
+AUTHORIZED_KEYS = "/home/root/.ssh/authorized_keys"
 
 def safe_get(d, *path, default=None):
     sentinel = object()
@@ -78,6 +81,13 @@ async def setup_network(ifname, hostname, network_config):
         await setup_ap(ifname, hostname, network_config)
 
 
+async def setup_authorized_keys(authorized_keys):
+    if authorized_keys:
+        with open(AUTHORIZED_KEYS, "w") as outf:
+            outf.writelines(authorized_keys + [""])
+        os.chmod(AUTHORIZED_KEYS, stat.S_IRUSR | stat.S_IWUSR)
+
+
 async def setup_hostname(hostname):
     proc = await asyncio.create_subprocess_exec(
         "hostname", hostname,
@@ -97,7 +107,7 @@ def main():
     opts = parser.parse_args()
     config = load_conf(opts.config)
     loglevel = safe_get(config, "loglevel", default="DEBUG")
-    loglevel = getattr(logging, loglevel)
+    loglevel = getattr(logging, loglevel.upper())
     logging.basicConfig(
         level=loglevel,
     )
@@ -107,6 +117,11 @@ def main():
     loop.create_task(
         setup_hostname(
             safe_get(config, "hostname", default="fpv-laptimer")
+        )
+    )
+    loop.create_task(
+        setup_authorized_keys(
+            safe_get(config, "authorized-keys", default=[])
         )
     )
     loop.create_task(

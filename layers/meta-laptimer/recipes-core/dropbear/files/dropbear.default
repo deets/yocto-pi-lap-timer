@@ -1,0 +1,2 @@
+# enforce SSH key login only
+DROPBEAR_EXTRA_ARGS="-g"

@@ -26,7 +26,7 @@ INITSCRIPT_NAME = "bootconf"
 INITSCRIPT_PARAMS = "start 01 5 3 2 . stop 99 0 1 6 ."
 
 
-FILES_${PN}_append = " /opt/bootconf/*"
+FILES_${PN}_append = " /opt/bootconf/* /home/root/.ssh"
 
 do_install_append () {
     install -d ${D}/opt/bootconf
@@ -36,4 +36,5 @@ do_install_append () {
     install ${WORKDIR}/udhcpd.conf ${D}/etc
     install -d ${D}${sysconfdir}/init.d
     install -m 0755 ${WORKDIR}/autostart-bootconf.sh ${D}${sysconfdir}/init.d/bootconf
+    install -m 0700 -d ${D}/home ${D}/home/root ${D}/home/root/.ssh
 }
