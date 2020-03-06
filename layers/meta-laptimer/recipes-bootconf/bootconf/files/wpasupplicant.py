@@ -1,5 +1,6 @@
 import dbus
 import urllib
+import subprocess
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 
@@ -10,6 +11,7 @@ WPAS_DBUS_OPATH = "/fi/w1/wpa_supplicant1"
 WPAS_DBUS_INTERFACES_INTERFACE = "fi.w1.wpa_supplicant1.Interface"
 WPAS_DBUS_INTERFACES_OPATH = "/fi/w1/wpa_supplicant1/Interfaces"
 WPAS_DBUS_BSS_INTERFACE = "fi.w1.wpa_supplicant1.BSS"
+WPAS_DBUS_NETWORK_INTERFACE = "fi.w1.wpa_supplicant1.Network"
 
 
 def byte_array_to_string(s):
@@ -72,6 +74,7 @@ class WPASupplicant:
 
     def __init__(self, bus, ifname):
         self._bus = bus
+        self._ifname = ifname
 
         wpas_obj = bus.get_object(WPAS_DBUS_SERVICE, WPAS_DBUS_OPATH)
         self._wpas = dbus.Interface(wpas_obj, WPAS_DBUS_INTERFACE)
@@ -102,7 +105,7 @@ class WPASupplicant:
             path = self._wpas.GetInterface(ifname)
         except dbus.DBusException as exc:
             if not str(exc).startswith(
-                            "fi.w1.wpa_supplicant1.InterfaceUnknown:"
+                "fi.w1.wpa_supplicant1.InterfaceUnknown:"
             ):
                 raise
             try:
@@ -120,29 +123,27 @@ class WPASupplicant:
                 self._if_obj,
                 WPAS_DBUS_INTERFACES_INTERFACE
         )
+        self._udhcpc = None
 
     def scan(self):
         self._iface.Scan({'Type': 'active'})
 
     def scan_done(self, success):
-        print("Scan done: success=%s" % success)
-
         res = self._if_obj.Get(WPAS_DBUS_INTERFACES_INTERFACE, 'BSSs',
                                dbus_interface=dbus.PROPERTIES_IFACE)
-        print("Scanned wireless networks:")
         for opath in res:
-            print(opath)
             show_bss(opath, self._bus)
 
     def bss_added(self, bss, properties):
-        print("BSS added: %s" % (bss))
         show_bss(bss, self._bus)
 
     def bss_removed(self, bss):
-        print("BSS removed: %s" % (bss))
+        pass
 
     def properties_changed(self, properties):
         if "State" in properties:
+            for key, value in properties.items():
+                print(key, value)
             print("PropertiesChanged: State: %s" % (properties["State"]))
 
     def run_access_point(self, ssid, frequency):
@@ -157,17 +158,76 @@ class WPASupplicant:
         netw = self._iface.AddNetwork(args)
         self._iface.SelectNetwork(netw)
 
+    def run_station(self, networks):
+        self._udhcpc = subprocess.Popen(
+            [
+                "udhcpc", "-R", "-b", "-p",
+                f"/var/run/udhcpc.{self._ifname}.pid",
+                "-i", self._ifname
+            ]
+        )
+        for ssid, password in networks:
+            self.get_or_add_network(
+                ssid,
+                password=password,
+            )
+
+    def __getitem__(self, property_):
+        """
+        To read properties, use self["Propertyname"], e.g.
+        self["Networks"]
+        """
+        return self._if_obj.Get(
+            WPAS_DBUS_INTERFACES_INTERFACE,
+            property_,
+            dbus_interface=dbus.PROPERTIES_IFACE
+        )
+
+    def list_networks(self):
+        for network_path in self["Networks"]:
+            yield self._bus.get_object(WPAS_DBUS_SERVICE, network_path)
+
+    def get_or_add_network(self, ssid, *, password=None):
+        for network in self.list_networks():
+            nw_props = network.Get(
+                WPAS_DBUS_NETWORK_INTERFACE,
+                "Properties",
+                dbus_interface=dbus.PROPERTIES_IFACE
+            )
+            # this is positively weird, but I get
+            # the string back with extra quotes. So they need removal
+            if nw_props["ssid"][1:-1] == ssid:
+                return network
+
+        d = {"ssid": dbus.String(ssid)}
+        if password is not None:
+            d["psk"] = dbus.String(password)
+        else:
+            d["key_mgmt"] = dbus.String("NONE")
+
+        network_path = self._iface.AddNetwork(dbus.Dictionary(d))
+        network_object = self._bus.get_object(WPAS_DBUS_SERVICE, network_path)
+        network_object.Set(
+            WPAS_DBUS_NETWORK_INTERFACE,
+            "Enabled", True,
+            dbus_interface=dbus.PROPERTIES_IFACE
+        )
+        return network_object
+
+    def reconnect(self):
+        self._iface.Reconnect()
+
 
 def main():
     # not entirely sure what this is good for
-    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-    bus = dbus.SystemBus()
-    wpa_supplicant = WPASupplicant(bus, "wlan0")
-    wpa_supplicant.scan()
-    ssid = "TEST_WPA_DBUS_HOTSPOT"
-    frequency = 2412
-    wpa_supplicant.run_access_point(ssid, frequency)
+    DBusGMainLoop(set_as_default=True)
     loop = GLib.MainLoop()
+    bus = dbus.SystemBus()
+    interface = "wlan0"
+    wpa_supplicant = WPASupplicant(bus, interface)
+    wpa_supplicant.run_station(
+        [("TP-LINK_2.4GHz_BBADE9", "51790684")]
+    )
     loop.run()
 
 
