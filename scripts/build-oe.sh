@@ -166,6 +166,20 @@ def build_image(bakery, opts):
     )
 
 
+def build_sdk(bakery, opts):
+    machine, image = opts.machine, opts.image
+    bakery.run(
+        [
+            "bitbake",
+            image,
+            "-c", "populate_sdk",
+        ],
+        extra_env=dict(
+            MACHINE=machine,
+        ),
+    )
+
+
 def choose_shell():
     from shellingham import detect_shell
     return detect_shell()
@@ -241,15 +255,15 @@ def parse_args():
         default=str(BASE / "build"),
         help="Where to build things in."
     )
-
-    subparsers = parser.add_subparsers(help='sub-command help')
-    parser_build = subparsers.add_parser('build', help='Build the image')
-    parser_build.set_defaults(func=build_image)
-    parser_build.add_argument(
+    parser.add_argument(
         "--image",
         default="laptimer-image",
         help="The image to build.",
     )
+
+    subparsers = parser.add_subparsers(help='sub-command help')
+    parser_build = subparsers.add_parser('build', help='Build the image')
+    parser_build.set_defaults(func=build_image)
 
     parser_shell = subparsers.add_parser(
         'shell',
@@ -257,6 +271,12 @@ def parse_args():
         'set up to run bitbake.'
     )
     parser_shell.set_defaults(func=bitbake_shell)
+
+    parser_sdk = subparsers.add_parser(
+        'sdk',
+        help='Build the Yocto SDK'
+    )
+    parser_sdk.set_defaults(func=build_sdk)
     return parser.parse_args()
 
 
