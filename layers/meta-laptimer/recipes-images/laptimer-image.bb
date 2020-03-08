@@ -9,12 +9,13 @@ RDEPENDS_append = "\
 
 CORE_IMAGE_EXTRA_INSTALL_append = "\
     avahi-daemon \
+    bootconf \
     dropbear \
+    i2c-tools \
+    iw \
+    os-release \
+    pigpio \
     rsync \
     udev-extra-rules \
-    os-release \
     wpa-supplicant \
-    iw \
-    i2c-tools \
-    bootconf \
     "

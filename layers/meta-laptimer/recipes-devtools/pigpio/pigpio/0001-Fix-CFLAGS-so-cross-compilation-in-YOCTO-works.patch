@@ -1,0 +1,22 @@
+From c9a1b880b4602515e0f6fa374b9149a774933771 Mon Sep 17 00:00:00 2001
+From: "Diez B. Roggisch" <deets@web.de>
+Date: Sun, 8 Mar 2020 17:43:17 +0100
+Subject: [PATCH] Fix CFLAGS so cross-compilation in YOCTO works
+
+---
+ CMakeLists.txt | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b36b0d6..a3b7866 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0)
+ 
+ project(pigpio)
+ 
+-set(CMAKE_C_FLAGS "-O3 -Wall -pthread")
++set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -Wall -pthread")
+ set(PIGPIO_FLAGS "-L. -lrt")
+ #set(DESTDIR ${CMAKE_CURRENT_SOURCE_DIR}/build/dest)
+ 
