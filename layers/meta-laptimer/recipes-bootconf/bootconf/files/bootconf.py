@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 import os
-import ast
 import argparse
-import logging
+import logging.handlers
 import asyncio
 import asyncio_glib
 import dbus.mainloop.glib
 import pathlib
 import wpasupplicant
+import configfiltering
 import stat
 
 logger = logging.getLogger("bootconf")
@@ -26,12 +26,6 @@ def safe_get(d, *path, default=None):
         if d is sentinel:
             return default
     return d
-
-
-def load_conf(configfile):
-    with open(configfile) as inf:
-        res = ast.literal_eval(inf.read())
-    return res
 
 
 def with_dbus(func):
@@ -77,6 +71,7 @@ async def setup_ap(ifname, hostname, network_config):
 
 @with_dbus
 async def setup_network(ifname, hostname, network_config):
+    # always prioritise ap!
     if "ap" in network_config:
         await setup_ap(ifname, hostname, network_config)
 
@@ -101,16 +96,21 @@ def setup_mainloop():
     return asyncio.get_event_loop()
 
 
+def setup_logging(loglevel):
+    root = logging.getLogger()
+    root.addHandler(logging.handlers.SysLogHandler("/dev/log"))
+    root.setLevel(loglevel)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
     opts = parser.parse_args()
-    config = load_conf(opts.config)
+    config = configfiltering.load_conf(opts.config)
     loglevel = safe_get(config, "loglevel", default="DEBUG")
     loglevel = getattr(logging, loglevel.upper())
-    logging.basicConfig(
-        level=loglevel,
-    )
+    setup_logging(loglevel)
+
     logger.debug("config %r", config)
     loop = setup_mainloop()
 

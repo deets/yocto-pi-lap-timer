@@ -5,6 +5,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI_append = " \
     file://bootconf.py\
     file://wpasupplicant.py\
+    file://configfiltering.py\
     file://udhcpd.conf\
     file://autostart-bootconf.sh\
 "
@@ -23,16 +24,15 @@ inherit update-rc.d
 INITSCRIPT_NAME = "bootconf"
 
 # The script parameters were adapted from D-Bus, as it is a dependency for Bootconf
-INITSCRIPT_PARAMS = "start 01 5 3 2 . stop 99 0 1 6 ."
+INITSCRIPT_PARAMS = "start 03 5 3 2 . stop 97 0 1 6 ."
 
 
 FILES_${PN}_append = " /opt/bootconf/* /home/root/.ssh"
 
 do_install_append () {
     install -d ${D}/opt/bootconf
-    install -m 0755 ${WORKDIR}/bootconf.py ${D}/opt/bootconf
-    install ${WORKDIR}/wpasupplicant.py ${D}/opt/bootconf
-    install -d ${D}/etc
+    install -m 0755 ${WORKDIR}/*.py ${D}/opt/bootconf
+    install -d ${D}${sysconfdir}
     install ${WORKDIR}/udhcpd.conf ${D}/etc
     install -d ${D}${sysconfdir}/init.d
     install -m 0755 ${WORKDIR}/autostart-bootconf.sh ${D}${sysconfdir}/init.d/bootconf
