@@ -12,6 +12,12 @@ from functools import wraps
 from contextlib import contextmanager
 from shutil import get_terminal_size
 
+IMAGES = [
+    "deets-image",
+    "rotorhazard-image",
+    "laptimer-image",
+]
+
 MACHINES = [
     "raspberrypi3",
     "raspberrypi2",
@@ -23,6 +29,7 @@ OE_CORE = LAYERS / "modules" / "openembedded-core"
 BITBAKEDIR = LAYERS / "modules" / "bitbake"
 LAYERS = [
     str(LAYERS / "modules" / "meta-raspberrypi"),
+    str(LAYERS / "modules" / "meta-qt5"),
     str(LAYERS / "meta-laptimer"),
 ]
 WHITELIST = (
@@ -257,7 +264,8 @@ def parse_args():
     )
     parser.add_argument(
         "--image",
-        default="laptimer-image",
+        choices=IMAGES,
+        default=IMAGES[0],
         help="The image to build.",
     )
 
