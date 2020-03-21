@@ -1,0 +1,30 @@
+* YOCTO Image for RotorHazard laptimer
+
+(c) 2020 Diez B. Roggisch, MIT-License
+
+The [[https://github.com/RotorHazard/RotorHazard][RotorHazard]] project provides a cheap way to setup a FPV drone race
+lap timing system with the popular Raspberry PI micro computer and a
+few other cheap bits of hardware.
+
+This project provides a [[https://www.yoctoproject.org/][YOCTO]] setup to achieve the following:
+
+ - simpler setup, instead of tweaking an official Raspian distribution
+   and installing several software packages and modify configuration
+   files distributed over the whole system, just flash & go.
+ - simplified configuration with just the laptimer configuration
+   itself (=config.json=) and a system-wide configuration
+   (=system.conf=) for things like wireless network, hostname, root
+   password etc.
+
+** TODO Root Password 
+
+** Network Configuration
+
+*** Running an Access Point (AP) 
+
+This is the default setup for the system. The SSID is equal to the
+hostname and the IP is =192.168.0.1=. The range of clients configured
+via DHCP is =192.168.0.20= to =192.168.0.254=.
+
+
+*** TODO Connecting to WIFI networks
