@@ -1,7 +1,7 @@
 include rotorhazard-image.bb
 
 CORE_IMAGE_EXTRA_INSTALL_append = "\
-    qtserialport \
+    propman \
     "
 
 # pull in QT5 sdk

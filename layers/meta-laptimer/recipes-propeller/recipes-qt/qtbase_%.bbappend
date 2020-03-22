@@ -1,0 +1,1 @@
+PACKAGECONFIG[tslib] = "-no-tslib"
