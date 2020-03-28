@@ -1,0 +1,3 @@
+:compile-command '(relative "./build.sh")
+:compilation-directory "build"
+
