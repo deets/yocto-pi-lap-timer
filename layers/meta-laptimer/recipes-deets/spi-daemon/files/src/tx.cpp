@@ -111,7 +111,7 @@ void Transmitter::do_statistics(const SPIDatagram& item)
   _stats.last_timestamp = new_timestamp;
   if(std::chrono::steady_clock::now() -_stats.start > 10s)
   {
-    _stats.max_diff = 0;
+    _stats.max_diff = _stats.spi_max_diff = 0;
     _stats.start = std::chrono::steady_clock::now();
   }
 }
@@ -119,11 +119,15 @@ void Transmitter::do_statistics(const SPIDatagram& item)
 std::string Transmitter::get_statistics_line() const
 {
   std::stringstream s;
-  s << ":" << _stats.max_diff;
+  s << ":" << _stats.max_diff << ":" << _stats.spi_max_diff;
   return s.str();
 }
 
 
-void Transmitter::do_spi_statistics(const ts_t&)
+void Transmitter::do_spi_statistics(const ts_t& spi_ts)
 {
+  using namespace std::chrono_literals;
+
+  _stats.spi_max_diff = (spi_ts - _stats.spi_last_timestamp) / 1us;
+  _stats.spi_last_timestamp = spi_ts;
 }

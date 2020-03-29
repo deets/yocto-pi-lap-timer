@@ -16,6 +16,8 @@ struct TXStatistics
   int64_t last_timestamp = -1;
   int64_t max_diff = 0;
   ts_t start = std::chrono::steady_clock::now();
+  ts_t spi_last_timestamp;
+  int64_t spi_max_diff;
 };
 
 class Transmitter {
