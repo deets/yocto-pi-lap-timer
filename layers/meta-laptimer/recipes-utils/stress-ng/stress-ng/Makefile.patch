@@ -1,0 +1,21 @@
+From e6d4a3f365b760e6c7d465a1bd61c19f4234f62b Mon Sep 17 00:00:00 2001
+From: OpenEmbedded <oe.patch@oe>
+Date: Tue, 2 Apr 2019 12:26:58 +0200
+Subject: [PATCH] From: deets@web.de
+
+---
+ Makefile | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index d8126c9..86b1ff0 100644
+--- a/Makefile
++++ b/Makefile
+@@ -354,7 +354,6 @@ endif
+ stress-ng: $(OBJS)
+ 	@echo "LD $@"
+ 	@$(CC) $(CPPFLAGS) $(CFLAGS) $(OBJS) -lm $(LDFLAGS) -o $@
+-	@sync
+ 
+ makeconfig:
+ 	@if [ ! -s config ]; then \

@@ -4,6 +4,7 @@ CORE_IMAGE_EXTRA_INSTALL_append = "\
     nanomsg \
     propman \
     spi-laptimer \
+    stress-ng \
     "
 
 # pull in QT5 sdk
