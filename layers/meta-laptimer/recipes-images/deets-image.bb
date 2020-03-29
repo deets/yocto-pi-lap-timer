@@ -2,6 +2,7 @@ include rotorhazard-image.bb
 
 CORE_IMAGE_EXTRA_INSTALL_append = "\
     propman \
+    nanomsg \
     "
 
 # pull in QT5 sdk

@@ -1,6 +1,5 @@
 // Copyright: 2020, Diez B. Roggisch, Berlin, all rights reserved
-
-#include "readerwriterqueue.h"
+#include "tx.h"
 
 #include <linux/spi/spidev.h>
 #include <time.h>
@@ -9,12 +8,10 @@
 #include <iostream>
 #include <sstream>
 #include <fcntl.h>
-#include <cstdint>
 #include <vector>
-#include <cstring>
-#include <iomanip>
 
-using namespace moodycamel;
+#include <sys/mman.h> // Needed for mlockall()
+#include <malloc.h>
 
 #define CHECK(v, msg) if(v == -1) {                 \
   std::stringstream s; \
@@ -23,60 +20,12 @@ using namespace moodycamel;
   }
 
 #define SPI_SPEED 3500000
+// This is the only thing the pi really supports
 #define SPI_BITS_PER_WORD 8
 
 namespace {
 
-struct SPIDatagram
-{
-  uint32_t control;
-  uint32_t payload[8];
-
-  void from_byte_array(const auto& byte_array)
-  {
-    uint32_t value;
-    const auto* p = byte_array.data();
-    std::memcpy(&value, p, sizeof(uint32_t));
-    control = __bswap_32(value);
-    for(int i=0; i < 8; ++i)
-    {
-      // on first iteration, already skip the control
-      p += sizeof(uint32_t);
-      std::memcpy(&value, p, sizeof(uint32_t));
-      payload[i] = __bswap_32(value);
-    }
-  }
-
-  operator bool() const
-  {
-    return control && 0xff;
-  }
-
-};
-
-
-std::ostream& operator << ( std::ostream& os, SPIDatagram const& value ) {
-  os << std::hex << std::internal << std::setfill('0');
-  os << std::setw(8);
-  os << value.control;
-  for(int i=0; i < sizeof(value.payload) / sizeof(uint32_t); ++i)
-  {
-    os << ":";
-    os << std::setw(8);
-    if(value)
-    {
-      os << value.payload[i];
-    }
-    else
-    {
-      os << 0;
-    }
-  }
-  os << std::dec;
-  return os;
-}
-
-
+const int SAMPLERATE = 2000;
 
 class SPIConnection
 {
@@ -116,13 +65,36 @@ private:
   std::vector<uint8_t> _result;
 };
 
+void prevent_page_locking()
+{
+  // Now lock all current and future pages from preventing of being paged
+  if (mlockall(MCL_CURRENT | MCL_FUTURE ))
+  {
+    perror("mlockall failed:");
+  }
+}
+
+void set_priority(int prio, int sched)
+{
+  struct sched_param param;
+  // Set realtime priority for this thread
+  param.sched_priority = prio;
+  if (sched_setscheduler(0, sched, &param) < 0)
+    perror("sched_setscheduler");
+}
+
 } // end ns anonymous
 
 int main(int argc, char *argv[])
 {
-  SPIConnection connection(argv[1]);
+  using namespace std::chrono_literals;
 
-  struct timespec  period = { 0, 100000000 };
+  prevent_page_locking();
+  set_priority(90, SCHED_RR);
+
+  SPIConnection connection(argv[1]);
+  Transmitter tx(argv[2]);
+  tx.start();
 
   // our buffers are 9 longs
   const auto input_data = std::vector<uint8_t>{
@@ -140,10 +112,13 @@ int main(int argc, char *argv[])
   while(true)
   {
     SPIDatagram datagram;
-    const auto& result = connection.xfer(input_data);
-    datagram.from_byte_array(result);
-    std::cout << datagram << "\n";
-    nanosleep(&period, nullptr);
+    do
+    {
+      const auto& result = connection.xfer(input_data);
+      datagram.from_byte_array(result);
+      tx.push(datagram);
+    } while(datagram.control > 8);
+    std::this_thread::sleep_for(1s / SAMPLERATE);
   }
   return 0;
 }
