@@ -4,6 +4,8 @@
 #include <cstring>
 #include <iomanip>
 
+const int QUEUE_SIZE = 400000;
+
 struct SPIDatagram
 {
   uint32_t control;

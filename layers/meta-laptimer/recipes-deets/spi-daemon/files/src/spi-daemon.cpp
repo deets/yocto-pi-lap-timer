@@ -116,7 +116,11 @@ int main(int argc, char *argv[])
     {
       const auto& result = connection.xfer(input_data);
       datagram.from_byte_array(result);
-      tx.push(datagram);
+      if(!tx.push(datagram))
+      {
+        std::cerr << "queue overflow, aborting.\n";
+        abort();
+      }
     } while(datagram.control > 8);
     std::this_thread::sleep_for(1s / SAMPLERATE);
   }

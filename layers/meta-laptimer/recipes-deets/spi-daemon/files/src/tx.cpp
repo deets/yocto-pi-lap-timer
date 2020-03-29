@@ -8,12 +8,6 @@
 #include <chrono>
 #include <sstream>
 
-namespace {
-
-const int QUEUE_SIZE = 4000;
-
-} // end ns anonymous
-
 Transmitter::Transmitter(const std::string& uri)
   : _queue(QUEUE_SIZE)
 {
@@ -62,18 +56,23 @@ void Transmitter::run()
   using namespace std::chrono_literals;
   while(true)
   {
-    if(_queue.size_approx() > QUEUE_SIZE / 2)
+    while(_queue.size_approx() > 100)
     {
       std::stringstream s;
-      for(int i=0; i < _queue.size_approx(); ++i)
+      for(int i=0; i < 100; ++i)
       {
-        SPIDatagram item;
+        queue_t::value_type item;
         _queue.try_dequeue(item);
-        if(item)
+        const auto [timestamp, datagram] = item;
+        if(datagram)
         {
-          s << item << "\n";
+          s << "D" << datagram << "\n";
+          do_statistics(datagram);
         }
+        do_spi_statistics(timestamp);
       }
+      s << "S" << get_statistics_line() << "\n";
+
       const auto content = s.str();
       const auto err = nn_send(_socket, content.data(), content.size(), NN_DONTWAIT);
       if(err == -1 && errno != EAGAIN)
@@ -91,7 +90,40 @@ void Transmitter::start()
 }
 
 
-void Transmitter::push(const SPIDatagram& datagram)
+bool Transmitter::push(const SPIDatagram& datagram)
 {
-  _queue.enqueue(datagram);
+  return _queue.try_enqueue({std::chrono::steady_clock::now(), datagram});
+}
+
+void Transmitter::do_statistics(const SPIDatagram& item)
+{
+  using namespace std::chrono_literals;
+
+  int64_t new_timestamp = item.payload[1];
+
+  if(_stats.last_timestamp != -1)
+  {
+    _stats.max_diff = std::max(
+      _stats.max_diff,
+      (new_timestamp + 4294967295 - _stats.last_timestamp) % 4294967296
+      );
+  }
+  _stats.last_timestamp = new_timestamp;
+  if(std::chrono::steady_clock::now() -_stats.start > 10s)
+  {
+    _stats.max_diff = 0;
+    _stats.start = std::chrono::steady_clock::now();
+  }
+}
+
+std::string Transmitter::get_statistics_line() const
+{
+  std::stringstream s;
+  s << ":" << _stats.max_diff;
+  return s.str();
+}
+
+
+void Transmitter::do_spi_statistics(const ts_t&)
+{
 }
