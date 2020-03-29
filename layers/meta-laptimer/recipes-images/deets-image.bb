@@ -1,8 +1,9 @@
 include rotorhazard-image.bb
 
 CORE_IMAGE_EXTRA_INSTALL_append = "\
-    propman \
     nanomsg \
+    propman \
+    spi-laptimer \
     "
 
 # pull in QT5 sdk
