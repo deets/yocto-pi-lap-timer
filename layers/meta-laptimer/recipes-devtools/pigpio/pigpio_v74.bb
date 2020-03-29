@@ -1,4 +1,4 @@
-DESCRIPTION = "pigpio "
+DESCRIPTION = "pigpio"
 SECTION = "devtools"
 LICENSE = "CLOSED"
 LIC_FILES_CHKSUM = "file://UNLICENCE"
