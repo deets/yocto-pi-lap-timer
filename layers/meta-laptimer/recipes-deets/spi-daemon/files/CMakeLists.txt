@@ -5,9 +5,10 @@ project(spi-daemon)
 
 add_executable(
   spi-daemon
+  src/datagram.cpp
+  src/realtime.cpp
   src/spi-daemon.cpp
   src/tx.cpp
-  src/datagram.cpp
   )
 
 target_compile_features(spi-daemon PRIVATE cxx_std_17)

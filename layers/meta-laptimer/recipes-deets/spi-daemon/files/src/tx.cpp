@@ -1,5 +1,6 @@
 // Copyright: 2020, Diez B. Roggisch, Berlin, all rights reserved
 #include "tx.h"
+#include "realtime.h"
 
 #include <nanomsg/nn.h>
 #include <nanomsg/pair.h>
@@ -54,6 +55,8 @@ Transmitter::Transmitter(const std::string& uri)
 void Transmitter::run()
 {
   using namespace std::chrono_literals;
+  set_priority(70, SCHED_RR);
+
   while(true)
   {
     while(_queue.size_approx() > 100)

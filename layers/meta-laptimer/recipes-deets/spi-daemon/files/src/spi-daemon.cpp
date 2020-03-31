@@ -1,5 +1,7 @@
 // Copyright: 2020, Diez B. Roggisch, Berlin, all rights reserved
 #include "tx.h"
+#include "realtime.h"
+
 
 #include <linux/spi/spidev.h>
 #include <time.h>
@@ -10,8 +12,6 @@
 #include <fcntl.h>
 #include <vector>
 
-#include <sys/mman.h> // Needed for mlockall()
-#include <malloc.h>
 
 #define CHECK(v, msg) if(v == -1) {                 \
   std::stringstream s; \
@@ -64,24 +64,6 @@ private:
   int _spi_fd;
   std::vector<uint8_t> _result;
 };
-
-void prevent_page_locking()
-{
-  // Now lock all current and future pages from preventing of being paged
-  if (mlockall(MCL_CURRENT | MCL_FUTURE ))
-  {
-    perror("mlockall failed:");
-  }
-}
-
-void set_priority(int prio, int sched)
-{
-  struct sched_param param;
-  // Set realtime priority for this thread
-  param.sched_priority = prio;
-  if (sched_setscheduler(0, sched, &param) < 0)
-    perror("sched_setscheduler");
-}
 
 } // end ns anonymous
 

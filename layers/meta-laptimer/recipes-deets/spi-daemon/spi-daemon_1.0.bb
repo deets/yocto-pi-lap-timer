@@ -9,13 +9,15 @@ SRC_URI = "\
     file://LICENSE \
     file://CMakeLists.txt \
     file://LICENSE \
-    file://src/tx.cpp \
-    file://src/spi-daemon.cpp \
-    file://src/datagram.h \
     file://src/atomicops.h \
-    file://src/readerwriterqueue.h \
-    file://src/tx.h \
     file://src/datagram.cpp \
+    file://src/datagram.h \
+    file://src/readerwriterqueue.h \
+    file://src/realtime.cpp \
+    file://src/realtime.h \
+    file://src/spi-daemon.cpp \
+    file://src/tx.cpp \
+    file://src/tx.h \
     "
 
 S="${WORKDIR}"
