@@ -3,7 +3,7 @@ include rotorhazard-image.bb
 CORE_IMAGE_EXTRA_INSTALL_append = "\
     nanomsg \
     propman \
-    spi-daemon \
+    spi-daemon-autostart \
     spi-laptimer \
     stress-ng \
     "
