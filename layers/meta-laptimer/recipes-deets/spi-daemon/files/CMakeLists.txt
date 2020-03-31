@@ -13,3 +13,5 @@ add_executable(
 target_compile_features(spi-daemon PRIVATE cxx_std_17)
 target_link_libraries(spi-daemon PRIVATE nanomsg pthread)
 target_compile_options(spi-daemon PRIVATE -fconcepts)
+
+install(TARGETS spi-daemon RUNTIME DESTINATION ${DESTDIR}/usr/bin)

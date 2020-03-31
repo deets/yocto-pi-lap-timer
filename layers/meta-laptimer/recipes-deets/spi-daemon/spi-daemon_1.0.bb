@@ -6,24 +6,29 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=eecac97884d7374757727f363dfede69"
 
 SRC_URI = "\
-    file://*\
-    file://LICENSE\
+    file://LICENSE \
+    file://CMakeLists.txt \
+    file://LICENSE \
+    file://src/tx.cpp \
+    file://src/spi-daemon.cpp \
+    file://src/datagram.h \
+    file://src/atomicops.h \
+    file://src/readerwriterqueue.h \
+    file://src/tx.h \
+    file://src/datagram.cpp \
     "
 
 S="${WORKDIR}"
 
 inherit cmake pkgconfig
-#inherit update-rc.d
 
-FILES_${PN} += "${bindir}/spi-daemon\
+FILES_${PN} += "\
+    ${bindir}/spi-daemon \
 "
 
 DEPENDS = "nanomsg"
 
-#INITSCRIPT_NAME = "spi-daemon-init"
-#INITSCRIPT_PARAMS = "start 10 5 3 2 . stop 90 0 1 6 ."
-
-do_install() {
+do_install_append() {
     install -d ${D}${bindir}
     install -m 0755 spi-daemon ${D}${bindir}
 }
