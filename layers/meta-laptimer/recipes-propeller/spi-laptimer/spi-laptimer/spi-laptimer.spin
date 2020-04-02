@@ -11,7 +11,6 @@ CON
   DATAGRAM_SIZE = 8
   BUFSIZE = 256 * DATAGRAM_SIZE
   SAMPLERATE = 2000
-  TUNING_FACTOR = 8192
 
   DEBUGPIN = 10
 VAR
@@ -25,8 +24,8 @@ PUB main | h, start_ts
     start(@write_pos)
     start_ts := cnt
     repeat
-      waitcnt(start_ts + clkfreq / SAMPLERATE - TUNING_FACTOR)
-      start_ts := cnt
+      start_ts += clkfreq / SAMPLERATE
+      waitcnt(start_ts)
       ' we use h here to write
       ' write_pos only after a full datagram
       ' has been written
