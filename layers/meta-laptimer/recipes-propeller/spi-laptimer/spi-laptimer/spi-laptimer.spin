@@ -10,7 +10,20 @@ CON
 
   DATAGRAM_SIZE = 8
   BUFSIZE = 256 * DATAGRAM_SIZE
-  SAMPLERATE = 2000
+  SAMPLERATE = 2
+
+  MPC_DATA_PIN = 17
+  MPC_CLK_PIN = 16
+  MPC_CS_PIN = 15
+
+  RTC_CLK = 22
+  RTC_DATA = 24
+  RTC_COUNT = 1
+
+  RTC_CS = 20 ' for now just one RTC
+
+  ADC_ADJUST_B = 93 ' see scripts/adc-spread-calc.py
+  ADJ_ADJUST_A = 46942
 
   DEBUGPIN = 10
 VAR
@@ -18,7 +31,12 @@ VAR
     long write_pos
     long ring_buffer[BUFSIZE]
 
-PUB main | h, start_ts
+OBJ
+  mcp3008: "MCP3008"
+
+PUB main | h, start_ts, rssi
+    mcp3008.start(MPC_DATA_PIN, MPC_CLK_PIN, MPC_CS_PIN, (|< RTC_COUNT) - 1 )
+
     dira[DEBUGPIN]~~
     write_pos := 0
     start(@write_pos)
@@ -26,11 +44,17 @@ PUB main | h, start_ts
     repeat
       start_ts += clkfreq / SAMPLERATE
       waitcnt(start_ts)
+      rssi := mcp3008.in(0)
+      ' rssi -= ADC_ADJUST_B
+      ' rssi *= ADJ_ADJUST_A
+
       ' we use h here to write
       ' write_pos only after a full datagram
       ' has been written
       h := write_pos
-      repeat DATAGRAM_SIZE
+      ring_buffer[h++] := cnt
+      ring_buffer[h++] := rssi
+      repeat DATAGRAM_SIZE - 2
         ring_buffer[h] := cnt
         h := (h + 1) // BUFSIZE
       write_pos := h
