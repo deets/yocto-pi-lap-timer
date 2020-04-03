@@ -97,6 +97,8 @@ spi_main
              mov      wordcounter, #DATAGRAM_SIZE + 1
              mov      d0, #out_buf
              movs     :word_read, d0
+             mov      d1, #in_buf
+             movd     :word_write, d1
 :word_loop
              mov      bitcount, #32
 :word_read   mov      buffer, d0
@@ -111,6 +113,9 @@ spi_main
        if_nz jmp      #:bit_loop
              add      d0, #1
              movs     :word_read, d0
+:word_write  mov      0, incoming
+             add      d1, #1
+             movd     :word_write, d1
              djnz     wordcounter, #:word_loop
 
              waitpeq  cs_mask, cs_mask
@@ -201,6 +206,7 @@ read_pos long 0
 mem_pointer long 0
 ' data registers
 d0       long 0
+d1       long 0
 
 size     long 0
 ' points to our current offset into
