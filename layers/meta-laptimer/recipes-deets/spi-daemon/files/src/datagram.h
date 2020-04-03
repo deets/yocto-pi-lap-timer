@@ -4,6 +4,8 @@
 #include <cstring>
 #include <iomanip>
 
+#define DATAGRAM_SIZE 9
+
 const int QUEUE_SIZE = 400000;
 
 struct SPIDatagram

@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
   tx.start();
 
   // our buffers are 9 longs
-  const auto input_data = std::vector<uint8_t>{
+  auto input_data = std::vector<uint8_t>{
     0x7f, 0xff, 0x00, 0xfe,
     0x7f, 0xff, 0x00, 0xfe,
     0x7f, 0xff, 0x00, 0xfe,
@@ -91,14 +91,21 @@ int main(int argc, char *argv[])
     0x7f, 0xff, 0x00, 0xfe
   };
 
+  uint32_t counter = 0;
   while(true)
   {
     SPIDatagram datagram;
     do
     {
+      for(uint32_t i=0; i < DATAGRAM_SIZE; ++i)
+      {
+        const uint32_t be_counter = __bswap_32(counter++);
+        std::memcpy(input_data.data() + i * sizeof(be_counter), &be_counter, sizeof(be_counter));
+      }
+
       const auto& result = connection.xfer(input_data);
       datagram.from_byte_array(result);
-      if(!tx.push(datagram))
+      if(datagram && !tx.push(datagram))
       {
         std::cerr << "queue overflow, aborting.\n";
         abort();
