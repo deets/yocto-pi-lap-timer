@@ -10,26 +10,16 @@ CON
 
   DATAGRAM_SIZE = 8
   BUFSIZE = 256 * DATAGRAM_SIZE
-  SAMPLERATE = 5
+  SAMPLERATE = 1000
 
   MPC_DATA_PIN = 17
   MPC_CLK_PIN = 16
   MPC_CS_PIN = 15
 
-  RTC_CLK = 22
-  RTC_DATA = 24
   RTC_COUNT = 1
-
-  RTC_CS = 20 ' for now just one RTC
-
-  ADC_ADJUST_B = 93 ' see scripts/adc-spread-calc.py
-  ADJ_ADJUST_A = 46942
 
   ' for debugging
   DEBUGPIN = 10
-  TX_PIN  = 30
-  RX_PIN  = 31
-  SERIAL_BPS = 115200
 
 VAR
     long cog
@@ -38,28 +28,19 @@ VAR
     long incoming_buffer[DATAGRAM_SIZE]
 OBJ
   mcp3008: "MCP3008"
-  serial: "FullDuplexSerial"
+  fu: "frequency-updater"
 
 PUB main | h, start_ts, rssi, loopcount
     mcp3008.start(MPC_DATA_PIN, MPC_CLK_PIN, MPC_CS_PIN, (|< RTC_COUNT) - 1 )
-    serial.Start(RX_PIN, TX_PIN, 0, SERIAL_BPS)
+    fu.start(@incoming_buffer + 4, RTC_COUNT)
     dira[DEBUGPIN]~~
     write_pos := 0
     start(@write_pos)
     start_ts := cnt
     repeat
-      serial.str(string("loop:"))
-      serial.dec(loopcount++)
-      serial.tx(58) ' :
-      serial.hex(incoming_buffer[0], 8)
-      serial.tx(58) ' :
-      serial.hex(incoming_buffer[1], 8)
-      nl
       start_ts += clkfreq / SAMPLERATE
       waitcnt(start_ts)
       rssi := mcp3008.in(0)
-      ' rssi -= ADC_ADJUST_B
-      ' rssi *= ADJ_ADJUST_A
 
       ' we use h here to write
       ' write_pos only after a full datagram
@@ -78,10 +59,6 @@ PRI start(wp): okay
 PRI stop
     if cog
        cogstop(cog~ - 1)
-
-PRI nl
-    serial.tx(13)
-    serial.tx(10)
 
 DAT org 0
 
