@@ -16,6 +16,7 @@ CORE_IMAGE_EXTRA_INSTALL_append = "\
     os-release \
     pigpio \
     rsync \
+    screen \
     udev-extra-rules \
     userland \
     wpa-supplicant \
