@@ -25,6 +25,7 @@
 
 namespace {
 
+const std::vector<uint32_t> raceband = {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917};
 const int SAMPLERATE = 2000;
 
 class SPIConnection
@@ -70,6 +71,7 @@ private:
 int main(int argc, char *argv[])
 {
   using namespace std::chrono_literals;
+  using sck = std::chrono::steady_clock;
 
   prevent_page_locking();
   set_priority(90, SCHED_RR);
@@ -91,17 +93,22 @@ int main(int argc, char *argv[])
     0x7f, 0xff, 0x00, 0xfe
   };
 
-  uint32_t counter = 0;
+  uint32_t frequency_offset = 0;
+  const auto update_frequency_period = 250ms;
+  auto update_frequency_timestamp = sck::now() + update_frequency_period;
+
   while(true)
   {
     SPIDatagram datagram;
     do
     {
-      for(uint32_t i=0; i < DATAGRAM_SIZE; ++i)
+      const uint32_t frequency = __bswap_32(raceband[frequency_offset]);
+      if(sck::now() >= update_frequency_timestamp)
       {
-        const uint32_t be_counter = __bswap_32(counter++);
-        std::memcpy(input_data.data() + i * sizeof(be_counter), &be_counter, sizeof(be_counter));
+        update_frequency_timestamp += update_frequency_period;
+        frequency_offset = (frequency_offset + 1) % raceband.size();
       }
+      std::memcpy(input_data.data() + sizeof(uint32_t), &frequency, sizeof(frequency));
 
       const auto& result = connection.xfer(input_data);
       datagram.from_byte_array(result);
