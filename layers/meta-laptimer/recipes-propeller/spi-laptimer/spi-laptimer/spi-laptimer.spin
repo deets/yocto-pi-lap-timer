@@ -10,7 +10,7 @@ CON
 
   DATAGRAM_SIZE = 8
   BUFSIZE = 256 * DATAGRAM_SIZE
-  SAMPLERATE = 2
+  SAMPLERATE = 5
 
   MPC_DATA_PIN = 17
   MPC_CLK_PIN = 16
@@ -35,7 +35,7 @@ VAR
     long cog
     long write_pos
     long ring_buffer[BUFSIZE]
-
+    long incoming_buffer[DATAGRAM_SIZE]
 OBJ
   mcp3008: "MCP3008"
   serial: "FullDuplexSerial"
@@ -49,6 +49,11 @@ PUB main | h, start_ts, rssi, loopcount
     start_ts := cnt
     repeat
       serial.str(string("loop:"))
+      serial.dec(loopcount++)
+      serial.tx(58) ' :
+      serial.hex(incoming_buffer[0], 8)
+      serial.tx(58) ' :
+      serial.hex(incoming_buffer[1], 8)
       nl
       start_ts += clkfreq / SAMPLERATE
       waitcnt(start_ts)
@@ -86,7 +91,8 @@ spi_main
              muxz      outa, miso_mask             ' set miso low
              muxnz     dira, miso_mask             ' and turn it output
 :cs_loop
-             call       #fill_buffer
+             call      #fill_out_buffer
+             call      #copy_input_buffer
              waitpne  cs_mask, cs_mask
              mov      wordcounter, #DATAGRAM_SIZE + 1
              mov      d0, #out_buf
@@ -117,9 +123,9 @@ spi_main
 ' size
 ' data[0..DATAGRAM_SIZE)
 '
-fill_buffer
-             mov      read_pointer, write_pos_addr
-             rdlong   size, read_pointer
+fill_out_buffer
+             mov      mem_pointer, write_pos_addr
+             rdlong   size, mem_pointer
              ' compute the amount of data in the ringbuffer
              sub      size, read_pos wc, wz
              ' ensure we correct for wrap-around
@@ -129,36 +135,56 @@ if_c         add      size, buf_size
              ' data to copy. the transaction will still
              ' copy over the old data, but we don't have to
              ' care about that.
-if_z         jmp      #fill_buffer_ret
+if_z         jmp      #fill_out_buffer_ret
              ' adjust our copy instruction to
              ' the beginning of our buffer beyond size
-             mov      out_pos, #out_buf
+             mov      buf_pos, #out_buf
              mov      wordcounter, #DATAGRAM_SIZE
 :copy_loop
              ' point to the next buffer element
-             add      out_pos, #1
-             movd     :read_long, out_pos
+             add      buf_pos, #1
+             movd     :read_long, buf_pos
              ' move forward to our actual
              ' read position
-             mov      read_pointer, write_pos_addr
+             mov      mem_pointer, write_pos_addr
              mov      d0, read_pos
              add      d0, #1 ' offset the write pos
              shl      d0, #2
-             add      read_pointer, d0
-:read_long   rdlong   0, read_pointer
+             add      mem_pointer, d0
+:read_long   rdlong   0, mem_pointer
              ' increment the read-pos and
              ' wrap it around at the end
              add      read_pos, #1
              cmp      read_pos, buf_size wz
 if_z         mov      read_pos, #0
              djnz     wordcounter, #:copy_loop
-fill_buffer_ret ret
+fill_out_buffer_ret ret
+
+
+copy_input_buffer
+             mov      mem_pointer, write_pos_addr
+             mov      d0, #1 ' skip write_pos
+             add      d0, buf_size ' skip the ring-buffer
+             shl      d0, #2
+             add      mem_pointer, d0
+             mov      buf_pos, #in_buf
+             movd     :write_long, buf_pos
+             mov      wordcounter, #DATAGRAM_SIZE
+:copy_loop
+:write_long  wrlong   0, mem_pointer
+             add      buf_pos, #1
+             movd     :write_long, buf_pos
+             add      mem_pointer, #4
+             djnz     wordcounter, #:copy_loop
+copy_input_buffer_ret ret
 
 
 cs_mask  long $1           ' A0 .. A3
 clk_mask long $2
 mosi_mask long $4
 miso_mask long $8
+' buffer size doesn't fit into a 9-bit
+' space anymore, thus needs to be held here
 buf_size long BUFSIZE
 
 wordcounter long 0
@@ -171,13 +197,15 @@ write_pos_addr long 0
 read_pos long 0
 ' the pointer into the main memory, at
 ' first the write position, then the ringbuffer
-' itself.
-read_pointer long 0
+' itself, then the incoming buffer
+mem_pointer long 0
 ' data registers
 d0       long 0
 
 size     long 0
-out_pos  long $0
+' points to our current offset into
+' either out_buf or in_buf
+buf_pos  long 0
 
 'out_buf  res DATAGRAM_SIZE + 1
 out_buf  long 9
@@ -189,3 +217,12 @@ out_buf  long 9
          long 3
          long 2
          long 1
+in_buf   long 100
+         long 200
+         long 300
+         long 400
+         long 500
+         long 600
+         long 700
+         long 800
+         long 900
