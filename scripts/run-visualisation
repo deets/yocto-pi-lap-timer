@@ -1,0 +1,3 @@
+#!/bin/bash
+# -*- mode: shell-script -*-
+pipenv run bokeh serve visualisation
