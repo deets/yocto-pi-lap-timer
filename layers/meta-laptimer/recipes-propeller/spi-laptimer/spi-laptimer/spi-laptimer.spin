@@ -25,7 +25,12 @@ CON
   ADC_ADJUST_B = 93 ' see scripts/adc-spread-calc.py
   ADJ_ADJUST_A = 46942
 
+  ' for debugging
   DEBUGPIN = 10
+  TX_PIN  = 30
+  RX_PIN  = 31
+  SERIAL_BPS = 115200
+
 VAR
     long cog
     long write_pos
@@ -33,15 +38,18 @@ VAR
 
 OBJ
   mcp3008: "MCP3008"
+  serial: "FullDuplexSerial"
 
-PUB main | h, start_ts, rssi
+PUB main | h, start_ts, rssi, loopcount
     mcp3008.start(MPC_DATA_PIN, MPC_CLK_PIN, MPC_CS_PIN, (|< RTC_COUNT) - 1 )
-
+    serial.Start(RX_PIN, TX_PIN, 0, SERIAL_BPS)
     dira[DEBUGPIN]~~
     write_pos := 0
     start(@write_pos)
     start_ts := cnt
     repeat
+      serial.str(string("loop:"))
+      nl
       start_ts += clkfreq / SAMPLERATE
       waitcnt(start_ts)
       rssi := mcp3008.in(0)
@@ -65,6 +73,10 @@ PRI start(wp): okay
 PRI stop
     if cog
        cogstop(cog~ - 1)
+
+PRI nl
+    serial.tx(13)
+    serial.tx(10)
 
 DAT org 0
 
