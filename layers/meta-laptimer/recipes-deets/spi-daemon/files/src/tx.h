@@ -29,7 +29,8 @@ public:
 
 private:
   using queue_t = moodycamel::ReaderWriterQueue<std::tuple<ts_t, SPIDatagram>>;
-  void run();
+  void send_loop();
+  void recv_loop();
   void do_statistics(const SPIDatagram&);
   void do_spi_statistics(const ts_t&);
   std::string get_statistics_line() const;
@@ -38,7 +39,8 @@ private:
   int _endpoint;
 
   queue_t _queue;
-  std::thread _thread;
+  std::thread _writer_thread;
+  std::thread _reader_thread;
 
   TXStatistics _stats;
 };

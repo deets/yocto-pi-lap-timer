@@ -1,6 +1,7 @@
 // Copyright: 2020, Diez B. Roggisch, Berlin, all rights reserved
 #include "tx.h"
 #include "realtime.h"
+#include "parser.hpp"
 
 #include <nanomsg/nn.h>
 #include <nanomsg/pair.h>
@@ -8,6 +9,10 @@
 #include <iostream>
 #include <chrono>
 #include <sstream>
+
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>; // not needed as of C++20
+
 
 Transmitter::Transmitter(const std::string& uri)
   : _queue(QUEUE_SIZE)
@@ -52,7 +57,7 @@ Transmitter::Transmitter(const std::string& uri)
   }
 }
 
-void Transmitter::run()
+void Transmitter::send_loop()
 {
   using namespace std::chrono_literals;
   set_priority(70, SCHED_RR);
@@ -87,9 +92,37 @@ void Transmitter::run()
   }
 }
 
+void Transmitter::recv_loop()
+{
+  std::array<char, 2048> buffer;
+
+
+  while(true)
+  {
+    const auto nbytes = nn_recv(_socket, buffer.data(), buffer.size(), 0);
+    if(nbytes < 0)
+    {
+    }
+    else if(nbytes > 0)
+    {
+      std::string_view msg(buffer.data(), nbytes);
+      const auto command = parse(msg);
+      std::visit(overloaded {
+          [](tune_cmd_t tune) { std::cout << "tune: " << tune.node << "->" << tune.frequency << "\n"; },
+          [](auto arg) { }
+        }, command);
+    }
+    else
+    {
+      std::cerr << "spurious recv!\n";
+    }
+  }
+}
+
 void Transmitter::start()
 {
-  _thread = std::thread([this]() { this->run(); });
+  _writer_thread = std::thread([this]() { this->send_loop(); });
+  _reader_thread = std::thread([this]() { this->recv_loop(); });
 }
 
 

@@ -46,6 +46,8 @@ def main():
     start = time.monotonic()
     while True:
         msg = socket.recv()
+        print(msg)
+        continue
         for diff, spi_diff in process_message(msg):
             ts_analyser.feed(diff, spi_diff)
         #print("max ts diff, max sample diffs:", ts_analyser.stats(), f"{time.monotonic() - start:+.2f}")
