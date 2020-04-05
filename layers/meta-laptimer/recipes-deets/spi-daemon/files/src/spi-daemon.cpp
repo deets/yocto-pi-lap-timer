@@ -83,14 +83,14 @@ int main(int argc, char *argv[])
   {
     configuration.payload[i++] = f;
   }
-  auto input_data = std::vector<uint8_t>(sizeof(SPIDatagram));
-
   SPIConnection connection(args.device);
   Transmitter tx(args.uri, configuration);
   tx.start();
 
   const auto period = 1000000us / args.samplerate;
   configuration.control = args.samplerate;
+
+  auto output_data = std::vector<uint8_t>(sizeof(SPIDatagram));
 
   while(true)
   {
@@ -101,10 +101,10 @@ int main(int argc, char *argv[])
     // not speed-reading. Which is fine, as
     // we expect these to be exceptional circumstances
     // anyway.
-    configuration.to_byte_array(input_data);
+    configuration.to_byte_array(output_data);
     do
     {
-      const auto& result = connection.xfer(input_data);
+      const auto& result = connection.xfer(output_data);
       datagram.from_byte_array(result);
       if(datagram && !tx.push(datagram))
       {

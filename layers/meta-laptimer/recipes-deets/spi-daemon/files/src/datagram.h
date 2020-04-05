@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
+#include <iostream>
 
 #define DATAGRAM_SIZE 9
 
@@ -33,11 +34,11 @@ struct SPIDatagram
 
   // populates a passed array with
   // enidaness-swapped values from ourselves
-  void to_byte_array(auto& byte_array)
+  void to_byte_array(auto& byte_array) const
   {
     uint32_t value = __bswap_32(control);
     auto p = byte_array.data();
-    std::memcpy(&value, p, sizeof(uint32_t));
+    std::memcpy(p, &value, sizeof(uint32_t));
     for(int i=0; i < DATAGRAM_SIZE - 1; ++i)
     {
       // on first iteration, already skip the control
@@ -45,7 +46,6 @@ struct SPIDatagram
       value = __bswap_32(payload[i]);
       std::memcpy(p,  &value, sizeof(uint32_t));
     }
-
   }
 
 

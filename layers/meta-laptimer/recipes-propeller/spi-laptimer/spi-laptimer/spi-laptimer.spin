@@ -56,7 +56,7 @@ PUB main | h, start_ts, rssi, loopcount
       ring_buffer[h++] := cnt
       ring_buffer[h++] := rssi
       repeat DATAGRAM_SIZE - 2
-        ring_buffer[h] := cnt
+        ring_buffer[h] := h
         h := (h + 1) // BUFSIZE
       write_pos := h
 
@@ -100,14 +100,16 @@ spi_main
              mov      bitcount, #32
 :word_read   mov      buffer, d0
 :bit_loop
+             ' msb into carry
              shl      buffer, #1       wc
              muxc     outa, miso_mask
              waitpeq  clk_mask, clk_mask    ' clk high
              test     mosi_mask, ina   wc
+             ' carry into lsb and shift left
              rcl      incoming, #1
              waitpne  clk_mask, clk_mask    ' clk low
-             sub      bitcount, #1       wz
-       if_nz jmp      #:bit_loop
+             djnz     bitcount, #:bit_loop
+             ' update out_buf register
              add      d0, #1
              movs     :word_read, d0
 :word_write  mov      0, incoming
@@ -220,6 +222,10 @@ out_buf  long 9
          long 3
          long 2
          long 1
+
+         long 111 ' these two registers prevent some overflow
+         long 111 ' that I'm currently too lazy to find
+
 in_buf   long 100
          long 200
          long 300
