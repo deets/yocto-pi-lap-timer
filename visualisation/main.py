@@ -24,9 +24,7 @@ class PropellerTimestampProcessor:
 
     def __call__(self, timestamp):
         if self._last_ts is not None:
-            diff = timestamp - self._last_ts
-            if diff < -2**31:
-                diff += 2**32
+            diff = (timestamp + 2**32 - self._last_ts) % 2**32
             self.signal.on_next(diff / self.CPUFREQ)
         self._last_ts = timestamp
 
@@ -113,9 +111,12 @@ class Visualisation:
 
         def update_td(tdiff):
             timedelta = td_source.data['timedelta']
+            x = td_source.data['x']
+            x = x[1:] + [x[-1] + 1]
             timedelta = timedelta[1:]
-            timedelta.append(tdiff * 1000) # convert to ms
+            timedelta.append(tdiff * 1000)  # convert to ms
             patch = dict(
+                x=[(slice(0, RSSI_HISTORY), x)],
                 timedelta=[(slice(0, RSSI_HISTORY), timedelta)],
             )
             td_source.patch(patch)
