@@ -3,7 +3,7 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 NAME=spi-daemon
 DAEMON=/usr/bin/spi-daemon
 DESC="SPI daemon"
-OPTS="/dev/spidev0.0 tcp://0.0.0.0:5000"
+OPTS="-s 2000 -d /dev/spidev0.0 -u tcp://0.0.0.0:5000"
 
 case "$1" in
   start)
