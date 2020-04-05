@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright: 2020, Diez B. Roggisch, Berlin . All rights reserved.
+from collections import Counter
+
 import nanomsg
 
 CHANNELS = {
@@ -28,11 +30,13 @@ FREQUENCIES = sorted(
 
 NAME2FREQ = dict(zip(CHANNEL_NAMES, FREQUENCIES))
 
+
 class PropellerNodeController:
 
     def __init__(self, uri):
         self._socket = nanomsg.Socket(nanomsg.PAIR)
         self._socket.connect(uri)
+        self._bufsizes = Counter()
 
     def configuration(self):
         return 1, None
@@ -46,13 +50,19 @@ class PropellerNodeController:
 
     def _transform_to_laptime(self, line):
         """
+        A single message looks like this:
         D00000008:845274c1:00000091:84527e21:845287a1:84529121:84529aa1:8452a421:8452ada1
+
+        ^- type
+                ^- valid data in this line, and possible excess data beyond
+                  ^- timestamp (propeller clocks)
+                           ^- first ADC value
         """
-        parts = line.split(":")[1:3]
-        return f"l{parts[0]}:{parts[1]}"
+        parts = line.split(":")
+        parts = parts[1:1 + self.configuration()[0] + 1]
+        return "l" + ":".join(parts)
 
     def tune(self, node_number, channel_name):
         frequency = NAME2FREQ[channel_name]
         msg = f"T{node_number}:{frequency}"
-        print(msg)
         self._socket.send(msg)
