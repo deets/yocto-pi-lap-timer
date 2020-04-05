@@ -10,7 +10,6 @@ CON
 
   DATAGRAM_SIZE = 9 ' including the leading control word
   BUFSIZE = 256 * DATAGRAM_SIZE
-  SAMPLERATE = 2
 
   MPC_DATA_PIN = 17
   MPC_CLK_PIN = 16
@@ -27,17 +26,19 @@ CON
 
 VAR
     long cog
+    long samplerate
     long write_pos
     long ring_buffer[BUFSIZE]
     long incoming_buffer[DATAGRAM_SIZE]
 OBJ
   mcp3008: "MCP3008"
   fu: "frequency-updater"
-  serial: "FullDuplexSerial"
+'  serial: "FullDuplexSerial"
 
 PUB main | h, start_ts, rssi, loopcount
     mcp3008.start(MPC_DATA_PIN, MPC_CLK_PIN, MPC_CS_PIN, (|< RTC_COUNT) - 1 )
-    serial.Start(RX_PIN, TX_PIN, 0, SERIAL_BPS)
+    'serial.Start(RX_PIN, TX_PIN, 0, SERIAL_BPS)
+    samplerate := 500
 
     fu.start(@incoming_buffer + 4, RTC_COUNT)
     dira[DEBUGPIN]~~
@@ -45,7 +46,7 @@ PUB main | h, start_ts, rssi, loopcount
     start(@write_pos)
     start_ts := cnt
     repeat
-      start_ts += clkfreq / SAMPLERATE
+      start_ts += clkfreq / samplerate
       waitcnt(start_ts)
       rssi := mcp3008.in(0)
 
@@ -59,8 +60,8 @@ PUB main | h, start_ts, rssi, loopcount
         ring_buffer[h] := h
         h := (h + 1) // BUFSIZE
       write_pos := h
-
-      print_incoming_buffer
+      samplerate := incoming_buffer[0]
+      'print_incoming_buffer
 
 PRI start(wp): okay
     okay := cognew(@spi_main, wp) + 1
@@ -69,15 +70,15 @@ PRI stop
     if cog
        cogstop(cog~ - 1)
 
-PRI print_incoming_buffer | i
-    repeat i from 0 to DATAGRAM_SIZE - 1
-      serial.hex(incoming_buffer[i], 8)
-      serial.tx(58)
-    nl
+' PRI print_incoming_buffer | i
+'     repeat i from 0 to DATAGRAM_SIZE - 1
+'       serial.hex(incoming_buffer[i], 8)
+'       serial.tx(58)
+'     nl
 
-PRI nl
-    serial.tx(13)
-    serial.tx(10)
+' PRI nl
+'     serial.tx(13)
+'     serial.tx(10)
 
 
 DAT org 0
