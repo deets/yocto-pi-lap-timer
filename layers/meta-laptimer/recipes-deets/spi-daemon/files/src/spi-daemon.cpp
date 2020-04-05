@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
 
   auto output_data = std::vector<uint8_t>(sizeof(SPIDatagram));
 
+  auto sleep_until = sck::now();
   while(true)
   {
     SPIDatagram datagram;
@@ -112,7 +113,8 @@ int main(int argc, char *argv[])
         abort();
       }
     } while(datagram.control > 8);
-    std::this_thread::sleep_for(period);
+    sleep_until += period;
+    std::this_thread::sleep_for(sleep_until - sck::now());
   }
   return 0;
 }
