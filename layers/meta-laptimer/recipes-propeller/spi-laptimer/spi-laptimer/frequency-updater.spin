@@ -22,7 +22,7 @@ CON
 
 OBJ
   rtc6715: "RTC6715"
-  serial: "FullDuplexSerial"
+  'serial: "FullDuplexSerial"
 
 VAR
    word frequencies[8]
@@ -38,27 +38,28 @@ PUB stop
     cogstop(cog_id)
 
 PRI run(frequency_table, rtc_count)  | i, freq
-  serial.Start(RX_PIN, TX_PIN, 0, SERIAL_BPS)
+  'serial.Start(RX_PIN, TX_PIN, 0, SERIAL_BPS)
   rtc6715.init(RTC_CLK, RTC_DATA)
 
   repeat i from 0 to rtc_count - 1
     frequencies[i] := raceband[i]
     rtc6715.set_frequency(RTC_CS + i, raceband[i])
   repeat
-    repeat i from 0 to rtc_count - 1
-      freq := long[frequency_table] & $ffff ' we only expect the lower word
-      serial.dec(freq)
-      nl
 
+    repeat i from 0 to rtc_count - 1
+      freq := long[frequency_table + i] & $ffff ' we only expect the lower word
+      'serial.str(string("incoming:"))
+      'serial.dec(freq)
+      'nl
       if freq <> frequencies[i]
         frequencies[i] := freq
         rtc6715.set_frequency(RTC_CS + i, freq)
-        serial.dec(freq)
-        nl
+        'serial.dec(freq)
+        'nl
 
 PRI nl
-    serial.tx(13)
-    serial.tx(10)
+    'serial.tx(13)
+    'serial.tx(10)
 
 
 DAT

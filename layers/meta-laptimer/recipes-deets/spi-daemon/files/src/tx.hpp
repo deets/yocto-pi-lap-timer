@@ -2,6 +2,7 @@
 #pragma once
 
 #include "datagram.h"
+#include "parser.hpp"
 
 #include "readerwriterqueue.h"
 
@@ -23,12 +24,14 @@ struct TXStatistics
 class Transmitter {
 
 public:
-  Transmitter(const std::string& uri);
+  Transmitter(const std::string& uri, SPIDatagram& configuration);
+
   void start();
   bool push(const SPIDatagram&);
 
 private:
-  using queue_t = moodycamel::ReaderWriterQueue<std::tuple<ts_t, SPIDatagram>>;
+  using output_queue_t = moodycamel::ReaderWriterQueue<std::tuple<ts_t, SPIDatagram>>;
+  using input_queue_t = moodycamel::ReaderWriterQueue<parse_result_t>;
   void send_loop();
   void recv_loop();
   void do_statistics(const SPIDatagram&);
@@ -37,8 +40,11 @@ private:
 
   int _socket;
   int _endpoint;
+  SPIDatagram& _configuration;
 
-  queue_t _queue;
+  output_queue_t _queue;
+  input_queue_t _input_queue;
+
   std::thread _writer_thread;
   std::thread _reader_thread;
 

@@ -1,7 +1,6 @@
 // Copyright: 2020, Diez B. Roggisch, Berlin, all rights reserved
-#include "tx.h"
+#include "tx.hpp"
 #include "realtime.h"
-#include "parser.hpp"
 
 #include <nanomsg/nn.h>
 #include <nanomsg/pair.h>
@@ -13,9 +12,13 @@
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>; // not needed as of C++20
 
+const auto INPUT_QUEUE_SIZE = 100;
 
-Transmitter::Transmitter(const std::string& uri)
+
+Transmitter::Transmitter(const std::string& uri, SPIDatagram& configuration)
   : _queue(QUEUE_SIZE)
+  , _input_queue(INPUT_QUEUE_SIZE)
+  , _configuration(configuration)
 {
   _socket = nn_socket(AF_SP, NN_PAIR);
   assert(_socket >= 0);
@@ -69,7 +72,7 @@ void Transmitter::send_loop()
       std::stringstream s;
       for(int i=0; i < 100; ++i)
       {
-        queue_t::value_type item;
+        output_queue_t::value_type item;
         _queue.try_dequeue(item);
         const auto [timestamp, datagram] = item;
         if(datagram)
@@ -107,10 +110,12 @@ void Transmitter::recv_loop()
     {
       std::string_view msg(buffer.data(), nbytes);
       const auto command = parse(msg);
-      std::visit(overloaded {
-          [](tune_cmd_t tune) { std::cout << "tune: " << tune.node << "->" << tune.frequency << "\n"; },
-          [](auto arg) { }
-        }, command);
+      if(!std::holds_alternative<no_cmd_t>(command))
+      {
+        const auto result = _input_queue.try_enqueue(command);
+        // assert(result);
+        // std::cout << "got command " << msg << "q size:" << _input_queue.size_approx() << "\n";
+      }
     }
     else
     {
@@ -128,7 +133,20 @@ void Transmitter::start()
 
 bool Transmitter::push(const SPIDatagram& datagram)
 {
-  return _queue.try_enqueue({std::chrono::steady_clock::now(), datagram});
+  const auto res = _queue.try_enqueue({std::chrono::steady_clock::now(), datagram});
+
+  for(auto i=0; i < _input_queue.size_approx(); ++i)
+  {
+    input_queue_t::value_type command;
+    _input_queue.try_dequeue(command);
+    std::visit(overloaded {
+        [this](tune_cmd_t tune) {
+          _configuration.payload[tune.node] = tune.frequency;
+        },
+        [](auto arg) { }
+      }, command);
+  }
+  return res;
 }
 
 void Transmitter::do_statistics(const SPIDatagram& item)

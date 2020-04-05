@@ -25,6 +25,7 @@ FREQUENCIES = sorted(
     for frequency in frequencies
 )
 
+
 NAME2FREQ = dict(zip(CHANNEL_NAMES, FREQUENCIES))
 
 class PropellerNodeController:
@@ -53,4 +54,5 @@ class PropellerNodeController:
     def tune(self, node_number, channel_name):
         frequency = NAME2FREQ[channel_name]
         msg = f"T{node_number}:{frequency}"
+        print(msg)
         self._socket.send(msg)

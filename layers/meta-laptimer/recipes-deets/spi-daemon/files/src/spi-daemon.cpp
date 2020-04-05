@@ -1,7 +1,7 @@
 // Copyright: 2020, Diez B. Roggisch, Berlin, all rights reserved
-#include "tx.h"
+#include "tx.hpp"
 #include "realtime.h"
-
+#include "arguments.hpp"
 
 #include <linux/spi/spidev.h>
 #include <time.h>
@@ -26,7 +26,6 @@
 namespace {
 
 const std::vector<uint32_t> raceband = {5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917};
-const int SAMPLERATE = 2000;
 
 class SPIConnection
 {
@@ -73,43 +72,38 @@ int main(int argc, char *argv[])
   using namespace std::chrono_literals;
   using sck = std::chrono::steady_clock;
 
+  const auto args = parse_args(argc, argv);
+
   prevent_page_locking();
   set_priority(90, SCHED_RR);
 
-  SPIConnection connection(argv[1]);
-  Transmitter tx(argv[2]);
+  SPIDatagram configuration;
+  int i = 0;
+  for(const auto& f : raceband)
+  {
+    configuration.payload[i++] = f;
+  }
+  auto input_data = std::vector<uint8_t>(sizeof(SPIDatagram));
+
+  SPIConnection connection(args.device);
+  Transmitter tx(args.uri, configuration);
   tx.start();
 
-  // our buffers are 9 longs
-  auto input_data = std::vector<uint8_t>{
-    0x7f, 0xff, 0x00, 0xfe,
-    0x7f, 0xff, 0x00, 0xfe,
-    0x7f, 0xff, 0x00, 0xfe,
-    0x7f, 0xff, 0x00, 0xfe,
-    0x7f, 0xff, 0x00, 0xfe,
-    0x7f, 0xff, 0x00, 0xfe,
-    0x7f, 0xff, 0x00, 0xfe,
-    0x7f, 0xff, 0x00, 0xfe,
-    0x7f, 0xff, 0x00, 0xfe
-  };
-
-  uint32_t frequency_offset = 0;
-  const auto update_frequency_period = 250ms;
-  auto update_frequency_timestamp = sck::now() + update_frequency_period;
+  const auto period = 1000000us / args.samplerate;
+  configuration.control = args.samplerate;
 
   while(true)
   {
     SPIDatagram datagram;
+
+    // ATTENTION: this setup currently only ever
+    // allows a configuration change when we are
+    // not speed-reading. Which is fine, as
+    // we expect these to be exceptional circumstances
+    // anyway.
+    configuration.to_byte_array(input_data);
     do
     {
-      const uint32_t frequency = __bswap_32(raceband[frequency_offset]);
-      if(sck::now() >= update_frequency_timestamp)
-      {
-        update_frequency_timestamp += update_frequency_period;
-        frequency_offset = (frequency_offset + 1) % raceband.size();
-      }
-      std::memcpy(input_data.data() + sizeof(uint32_t), &frequency, sizeof(frequency));
-
       const auto& result = connection.xfer(input_data);
       datagram.from_byte_array(result);
       if(datagram && !tx.push(datagram))
@@ -118,7 +112,7 @@ int main(int argc, char *argv[])
         abort();
       }
     } while(datagram.control > 8);
-    std::this_thread::sleep_for(1s / SAMPLERATE);
+    std::this_thread::sleep_for(period);
   }
   return 0;
 }

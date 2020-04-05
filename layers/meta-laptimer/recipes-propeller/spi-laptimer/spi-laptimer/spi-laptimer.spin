@@ -8,9 +8,9 @@ CON
   _clkmode = xtal1 + pll16x
   _xinfreq = 6_000_000
 
-  DATAGRAM_SIZE = 8
+  DATAGRAM_SIZE = 9 ' including the leading control word
   BUFSIZE = 256 * DATAGRAM_SIZE
-  SAMPLERATE = 1000
+  SAMPLERATE = 2
 
   MPC_DATA_PIN = 17
   MPC_CLK_PIN = 16
@@ -21,6 +21,10 @@ CON
   ' for debugging
   DEBUGPIN = 10
 
+  TX_PIN  = 30
+  RX_PIN  = 31
+  SERIAL_BPS = 115200
+
 VAR
     long cog
     long write_pos
@@ -29,9 +33,12 @@ VAR
 OBJ
   mcp3008: "MCP3008"
   fu: "frequency-updater"
+  serial: "FullDuplexSerial"
 
 PUB main | h, start_ts, rssi, loopcount
     mcp3008.start(MPC_DATA_PIN, MPC_CLK_PIN, MPC_CS_PIN, (|< RTC_COUNT) - 1 )
+    serial.Start(RX_PIN, TX_PIN, 0, SERIAL_BPS)
+
     fu.start(@incoming_buffer + 4, RTC_COUNT)
     dira[DEBUGPIN]~~
     write_pos := 0
@@ -53,12 +60,25 @@ PUB main | h, start_ts, rssi, loopcount
         h := (h + 1) // BUFSIZE
       write_pos := h
 
+      print_incoming_buffer
+
 PRI start(wp): okay
     okay := cognew(@spi_main, wp) + 1
 
 PRI stop
     if cog
        cogstop(cog~ - 1)
+
+PRI print_incoming_buffer | i
+    repeat i from 0 to DATAGRAM_SIZE - 1
+      serial.hex(incoming_buffer[i], 8)
+      serial.tx(58)
+    nl
+
+PRI nl
+    serial.tx(13)
+    serial.tx(10)
+
 
 DAT org 0
 
@@ -71,7 +91,7 @@ spi_main
              call      #fill_out_buffer
              call      #copy_input_buffer
              waitpne  cs_mask, cs_mask
-             mov      wordcounter, #DATAGRAM_SIZE + 1
+             mov      wordcounter, #DATAGRAM_SIZE
              mov      d0, #out_buf
              movs     :word_read, d0
              mov      d1, #in_buf
@@ -112,7 +132,7 @@ fill_out_buffer
              sub      size, read_pos wc, wz
              ' ensure we correct for wrap-around
 if_c         add      size, buf_size
-             mov       out_buf, size
+             mov      out_buf, size
              ' if the size is zero, we don't have any
              ' data to copy. the transaction will still
              ' copy over the old data, but we don't have to

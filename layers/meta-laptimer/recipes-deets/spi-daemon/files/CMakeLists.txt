@@ -7,6 +7,7 @@ include_directories(spi-daemon PRIVATE include src)
 
 add_executable(
   spi-daemon
+  src/arguments.cpp
   src/datagram.cpp
   src/parser.cpp
   src/realtime.cpp
