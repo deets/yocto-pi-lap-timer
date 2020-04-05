@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
         std::cerr << "queue overflow, aborting.\n";
         abort();
       }
-    } while(datagram.control > 8);
+    } while(datagram.more_data_available());
     sleep_until += period;
     std::this_thread::sleep_for(sleep_until - sck::now());
   }

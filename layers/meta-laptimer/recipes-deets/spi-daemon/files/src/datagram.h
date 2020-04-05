@@ -48,11 +48,21 @@ struct SPIDatagram
     }
   }
 
-
+  // Is the data received valid?
+  // In case we over-sample, there might be no
+  // bytes left.
   operator bool() const
   {
     return control && 0xff;
   }
+
+  // if there is more than one
+  // buffer left on the propeller side
+  bool more_data_available() const
+  {
+    return control > DATAGRAM_SIZE;
+  }
+
 };
 
 #pragma pack(pop)
