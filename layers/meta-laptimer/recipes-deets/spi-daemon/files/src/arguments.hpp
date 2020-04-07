@@ -4,6 +4,7 @@
 struct arguments_t
 {
   int samplerate;
+  int thinning;
   std::string device;
   std::string uri;
 };

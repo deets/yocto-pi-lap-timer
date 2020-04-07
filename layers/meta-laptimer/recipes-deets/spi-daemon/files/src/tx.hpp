@@ -24,7 +24,7 @@ struct TXStatistics
 class Transmitter {
 
 public:
-  Transmitter(const std::string& uri, SPIDatagram& configuration);
+  Transmitter(const std::string& uri, SPIDatagram& configuration, int thinning);
 
   void start();
   bool push(const SPIDatagram&);
@@ -38,6 +38,7 @@ private:
   void do_spi_statistics(const ts_t&);
   std::string get_statistics_line() const;
 
+  int _thinning;
   int _socket;
   int _endpoint;
   SPIDatagram& _configuration;

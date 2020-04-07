@@ -9,6 +9,7 @@ arguments_t parse_args(int argc, char* argv[])
   cxxopts::Options options(argv[0], "The SPI laptimer daemon");
   options.add_options()
   ("s,samplerate", "samplerate/second", cxxopts::value<int>()->default_value("2000"))
+  ("t,thinning", "skip T samples for network transfer", cxxopts::value<int>()->default_value("10"))
   ("d,device", "SPI device to use", cxxopts::value<std::string>()->default_value("/dev/spidev0.0"))
   ("u,uri", "URI to bind to with nanomsg", cxxopts::value<std::string>()->default_value("tcp://0.0.0.0:5000"))
   ("h,help", "Print usage")
@@ -22,6 +23,7 @@ arguments_t parse_args(int argc, char* argv[])
 
   arguments_t res = {
     result["samplerate"].as<int>(),
+    result["thinning"].as<int>(),
     result["device"].as<std::string>(),
     result["uri"].as<std::string>()
   };

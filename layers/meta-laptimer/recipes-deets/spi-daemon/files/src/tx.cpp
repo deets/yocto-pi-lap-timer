@@ -12,13 +12,18 @@
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>; // not needed as of C++20
 
+namespace {
+
 const auto INPUT_QUEUE_SIZE = 100;
+const auto SPI_STATISTICS_INTERVAL = 4000; // divide by samplerate
 
+} // end ns anonymous
 
-Transmitter::Transmitter(const std::string& uri, SPIDatagram& configuration)
+Transmitter::Transmitter(const std::string& uri, SPIDatagram& configuration, int thinning)
   : _queue(QUEUE_SIZE)
   , _input_queue(INPUT_QUEUE_SIZE)
   , _configuration(configuration)
+  , _thinning(thinning)
 {
   _socket = nn_socket(AF_SP, NN_PAIR);
   assert(_socket >= 0);
@@ -65,30 +70,40 @@ void Transmitter::send_loop()
   using namespace std::chrono_literals;
   set_priority(70, SCHED_RR);
 
+  uint64_t total_counter = 0;
+  uint64_t sent_counter = 0;
   while(true)
   {
-    while(_queue.size_approx() > 100)
+    const auto qsize = _queue.size_approx();
+    for(int i=0; i < qsize; ++i)
     {
       std::stringstream s;
-      for(int i=0; i < 100; ++i)
+      output_queue_t::value_type item;
+      _queue.try_dequeue(item);
+      ++total_counter;
+      const auto [timestamp, datagram] = item;
+      if(datagram)
       {
-        output_queue_t::value_type item;
-        _queue.try_dequeue(item);
-        const auto [timestamp, datagram] = item;
-        if(datagram)
+        if(total_counter % _thinning == 0)
         {
           s << "D" << datagram << "\n";
-          do_statistics(datagram);
+          ++sent_counter;
         }
-        do_spi_statistics(timestamp);
+        do_statistics(datagram);
       }
-      s << "S" << get_statistics_line() << "\n";
-
-      const auto content = s.str();
-      const auto err = nn_send(_socket, content.data(), content.size(), NN_DONTWAIT);
-      if(err == -1 && errno != EAGAIN)
+      do_spi_statistics(timestamp);
+      if((sent_counter % (SPI_STATISTICS_INTERVAL / _thinning)) == 0)
       {
-        std::cerr << "nn_send error: " << errno << "\n";
+        s << "S" << get_statistics_line() << "\n";
+      }
+      const auto content = s.str();
+      if(content.size())
+      {
+        const auto err = nn_send(_socket, content.data(), content.size(), NN_DONTWAIT);
+        if(err == -1 && errno != EAGAIN)
+        {
+          std::cerr << "nn_send error: " << errno << "\n";
+        }
       }
     }
     std::this_thread::sleep_for(100ms);

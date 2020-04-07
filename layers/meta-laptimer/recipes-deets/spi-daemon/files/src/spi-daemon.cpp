@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     configuration.payload[i++] = f;
   }
   SPIConnection connection(args.device);
-  Transmitter tx(args.uri, configuration);
+  Transmitter tx(args.uri, configuration, args.thinning);
   tx.start();
 
   const auto period = 1000000us / args.samplerate;
