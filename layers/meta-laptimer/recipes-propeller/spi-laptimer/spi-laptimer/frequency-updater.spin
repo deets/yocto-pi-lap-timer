@@ -40,6 +40,9 @@ PUB stop
 PRI run(frequency_table, rtc_count)  | i, freq
   serial.Start(RX_PIN, TX_PIN, 0, SERIAL_BPS)
   rtc6715.init(RTC_CLK, RTC_DATA)
+  repeat i from 0 to rtc_count - 1
+     dira[RTC_CS + i]~~
+     outa[RTC_CS + i]~~
 
   repeat i from 0 to rtc_count - 1
     frequencies[i] := raceband[i]
@@ -62,6 +65,13 @@ PRI nl
     serial.tx(13)
     serial.tx(10)
 
+
+PRI cycle_through_frequencies(rtc_count) | i, freq
+  repeat
+     waitcnt(cnt + clkfreq / 2)
+     repeat i from 0 to rtc_count - 1
+       freq := (freq + 1) // 8
+       rtc6715.set_frequency(RTC_CS + i, raceband[freq])
 
 DAT
 raceband word 5658, 5695, 5732, 5769, 5806, 5843, 5880, 5917
