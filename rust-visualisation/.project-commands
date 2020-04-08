@@ -1,2 +1,2 @@
-:compile-command '(absolute "cargo run")
+:compile-command '(absolute "cargo build")
 
