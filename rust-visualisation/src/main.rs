@@ -4,8 +4,9 @@ use std::sync::mpsc;
 use nannou::prelude::*;
 
 use nanomsg::{Socket, Protocol, Error};
-use std::io::{self, Read};
+use std::io::{Read};
 
+mod messageparsing;
 
 fn connect_to_spi_daemon(addr: &str) -> Result<nanomsg::Socket, Error> {
     match Socket::new(Protocol::Pair)
@@ -37,7 +38,7 @@ fn main() {
 
 struct Model {
     message_count: u64,
-    incoming_rx: std::sync::mpsc::Receiver<u64>
+    incoming_rx: std::sync::mpsc::Receiver<messageparsing::SpiMessage>
 
 }
 
@@ -46,13 +47,20 @@ fn model(_app: &App) -> Model {
     let mut socket = connect_to_spi_daemon(uri).unwrap();
     let (tx, rx) = mpsc::channel();
 
-    let handle = thread::spawn(move || {
+    thread::spawn(move || {
         loop {
             let mut buffer = Vec::new();
             match socket.read_to_end(&mut buffer) {
                 Ok(_) => {
                     println!("Read message {} bytes !", buffer.len());
-                    tx.send(1);
+                    match messageparsing::parse_message(&buffer) {
+                        Ok(messages) => {
+                            for spi_message in messages {
+                                tx.send(spi_message);
+                            }
+                        }
+                        Err(err) => panic!("Problem parsing messages: {:#?}", err)
+                    }
                 }
                 Err(err) => {
                     panic!("Problem reading from socket: {}", err);
@@ -70,7 +78,7 @@ fn model(_app: &App) -> Model {
 fn update(_app: &App, model: &mut Model, _update: Update) {
     match model.incoming_rx.try_recv()
     {
-        Ok(number) => {     model.message_count += number; }
+        Ok(_) => {     model.message_count += 1; }
         Err(_) => {}
     }
 }
