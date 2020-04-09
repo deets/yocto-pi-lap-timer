@@ -1,10 +1,11 @@
 use std::thread;
-use std::sync::mpsc;
 
 use nannou::prelude::*;
 
 use nanomsg::{Socket, Protocol, Error};
 use std::io::{Read};
+use ringbuf::{RingBuffer, Consumer};
+
 
 mod messageparsing;
 
@@ -38,25 +39,29 @@ fn main() {
 
 struct Model {
     message_count: u64,
-    incoming_rx: std::sync::mpsc::Receiver<messageparsing::SpiMessage>
-
+    incoming: Consumer<messageparsing::SpiMessage>,
 }
 
 fn model(_app: &App) -> Model {
     let uri = "tcp://fpv-laptimer.local:5000";
     let mut socket = connect_to_spi_daemon(uri).unwrap();
-    let (tx, rx) = mpsc::channel();
+    let rb = RingBuffer::new(2000);
+    let (mut prod, mut cons) = rb.split();
+
+    let model = Model {
+        message_count: 0,
+        incoming: cons
+    };
 
     thread::spawn(move || {
         loop {
             let mut buffer = Vec::new();
             match socket.read_to_end(&mut buffer) {
                 Ok(_) => {
-                    println!("Read message {} bytes !", buffer.len());
                     match messageparsing::parse_message(&buffer) {
                         Ok(messages) => {
                             for spi_message in messages {
-                                tx.send(spi_message);
+                                prod.push(spi_message);
                             }
                         }
                         Err(err) => panic!("Problem parsing messages: {:#?}", err)
@@ -69,18 +74,14 @@ fn model(_app: &App) -> Model {
         }
     });
 
-    Model {
-        message_count: 0,
-        incoming_rx: rx
-    }
+    return model;
 }
 
 fn update(_app: &App, model: &mut Model, _update: Update) {
-    match model.incoming_rx.try_recv()
-    {
-        Ok(_) => {     model.message_count += 1; }
-        Err(_) => {}
-    }
+    model.message_count += model.incoming.pop_each(
+        |message| -> bool {
+        return true;
+    }, None) as u64;
 }
 
 fn view(app: &App, model: &Model, frame: Frame){
