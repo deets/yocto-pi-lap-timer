@@ -5,14 +5,20 @@ pub struct PropellerTimeTracker
 {
     cpu_freq: i64,
     timestamp_accu: i64,
-    last_timestamp: Option<i64>
+    last_timestamp: Option<i64>,
+    start_time: f32
 }
 
 
 impl PropellerTimeTracker {
 
-    pub fn new() -> PropellerTimeTracker {
-        PropellerTimeTracker{ cpu_freq: 80_000_000, timestamp_accu: 0, last_timestamp: None }
+    pub fn new(now: f32) -> PropellerTimeTracker {
+        PropellerTimeTracker{
+            cpu_freq: 80_000_000,
+            timestamp_accu: 0,
+            last_timestamp: None,
+            start_time: now
+        }
     }
 
     pub fn feed(&mut self, timestamp: u32) -> f32 {
@@ -25,6 +31,6 @@ impl PropellerTimeTracker {
             None => {}
         }
         self.last_timestamp = Some(timestamp);
-        (self.timestamp_accu as f64 / self.cpu_freq as f64) as f32
+        self.start_time + (self.timestamp_accu as f64 / self.cpu_freq as f64) as f32
     }
 }
