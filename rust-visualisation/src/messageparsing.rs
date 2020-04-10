@@ -3,7 +3,7 @@ use std::convert::TryInto;
 #[derive(Debug, Copy, Clone)]
 pub struct Datagram {
     control: u32,
-    payload: [u32; 8]
+    pub payload: [u32; 8]
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -12,9 +12,10 @@ pub struct Statistics {
     spi_max_diff: u32
 }
 
-pub union SpiMessage {
-    data: Datagram,
-    stats: Statistics
+#[derive(Debug, Copy, Clone)]
+pub enum SpiMessage {
+    DataMessage(Datagram),
+    StatisticsMessage(Statistics)
 }
 
 
@@ -67,7 +68,7 @@ fn parse_line(message: &str) -> Result
 
 fn parse_stats(_command: &str, _payload: &Vec<&str>) -> Result {
     let stats = Statistics{ max_diff: 0, spi_max_diff: 0 };
-    let msg = SpiMessage{ stats: stats };
+    let msg = SpiMessage::StatisticsMessage(stats);
     return Ok(msg);
 }
 
@@ -80,7 +81,7 @@ fn parse_datagram(_command: &str, payload: &Vec<&str>) -> Result {
                 control: 0,
                 payload: payload
             };
-            return Ok(SpiMessage{ data: data });
+            return Ok(SpiMessage::DataMessage(data));
         }
         Err(_) => return Err(Error::UnknownFormat)
     }

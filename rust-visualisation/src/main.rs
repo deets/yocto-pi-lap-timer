@@ -1,13 +1,17 @@
 use std::thread;
 
 use nannou::prelude::*;
+use std::sync::mpsc;
 
 use nanomsg::{Socket, Protocol, Error};
 use std::io::{Read};
-use ringbuf::{RingBuffer, Consumer};
+use ringbuf::{RingBuffer, Consumer, Producer};
 
 
 mod messageparsing;
+mod rendering;
+mod timetracking;
+
 
 fn connect_to_spi_daemon(addr: &str) -> Result<nanomsg::Socket, Error> {
     match Socket::new(Protocol::Pair)
@@ -39,7 +43,11 @@ fn main() {
 
 struct Model {
     message_count: u64,
-    incoming: Consumer<messageparsing::SpiMessage>,
+    consumer: Consumer<messageparsing::SpiMessage>,
+    producer: Producer<messageparsing::SpiMessage>,
+    incoming: std::sync::mpsc::Receiver<messageparsing::SpiMessage>,
+    time_tracker: timetracking::PropellerTimeTracker,
+    propeller_time: f32
 }
 
 fn model(_app: &App) -> Model {
@@ -47,10 +55,15 @@ fn model(_app: &App) -> Model {
     let mut socket = connect_to_spi_daemon(uri).unwrap();
     let rb = RingBuffer::new(2000);
     let (mut prod, mut cons) = rb.split();
+    let (tx, rx) = mpsc::channel();
 
     let model = Model {
         message_count: 0,
-        incoming: cons
+        consumer: cons,
+        producer: prod,
+        incoming: rx,
+        time_tracker: timetracking::PropellerTimeTracker::new(),
+        propeller_time: 0.0
     };
 
     thread::spawn(move || {
@@ -61,7 +74,7 @@ fn model(_app: &App) -> Model {
                     match messageparsing::parse_message(&buffer) {
                         Ok(messages) => {
                             for spi_message in messages {
-                                prod.push(spi_message);
+                                tx.send(spi_message);
                             }
                         }
                         Err(err) => panic!("Problem parsing messages: {:#?}", err)
@@ -78,23 +91,31 @@ fn model(_app: &App) -> Model {
 }
 
 fn update(_app: &App, model: &mut Model, _update: Update) {
-    model.message_count += model.incoming.pop_each(
-        |message| -> bool {
-        return true;
-    }, None) as u64;
+    for message in model.incoming.try_iter()
+    {
+        model.producer.push(message);
+        match message {
+            messageparsing::SpiMessage::DataMessage(message) => {
+                model.propeller_time = model.time_tracker.feed(message.payload[0]);
+                model.message_count += 1;
+            }
+            messageparsing::SpiMessage::StatisticsMessage(_) => {}
+        }
+    }
 }
 
-fn view(app: &App, model: &Model, frame: Frame){
+
+fn view(app: &App, model: &Model, frame: Frame) {
     let draw = app.draw();
     frame.clear(PURPLE);
     // We'll align to the window dimensions, but padded slightly.
     let win_rect = app.main_window().rect().pad(20.0);
     draw.background().color(PURPLE);
 
-    let text = format!("message count: {}", model.message_count);
+    let text = format!("message count: {}, propeller timestamp: {}", model.message_count, model.propeller_time);
 
     draw.text(&text).color(WHITE).font_size(24).wh(win_rect.wh());
 
+    //rendering::draw_graph(&draw, win_rect, );
     draw.to_frame(app, &frame).unwrap();
-
 }
