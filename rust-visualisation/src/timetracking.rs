@@ -14,7 +14,7 @@ impl PropellerTimeTracker {
 
     pub fn new(now: f32) -> PropellerTimeTracker {
         PropellerTimeTracker{
-            cpu_freq: 80_000_000,
+            cpu_freq: 96_000_000,
             timestamp_accu: 0,
             last_timestamp: None,
             start_time: now

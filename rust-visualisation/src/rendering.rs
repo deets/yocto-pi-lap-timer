@@ -3,7 +3,7 @@ use nannou::draw::Draw;
 
 use ringbuf::{Consumer};
 
-const TIMERANGE:f32 = 10.0;
+const TIMERANGE:f32 = 2.0;
 
 pub struct Point {
     pub timestamp: f32,
@@ -62,5 +62,34 @@ impl ChannelGraph {
     pub fn len(&self) -> usize
     {
         self.points.len()
+    }
+}
+
+pub struct FPSCounter
+{
+    last_timestamp: f32,
+    fps: f32,
+    filter: f32
+
+}
+
+impl FPSCounter {
+
+    pub fn new(now: f32, filter: f32) -> FPSCounter
+    {
+        FPSCounter{last_timestamp: now, fps: 60.0, filter: filter }
+    }
+
+    pub fn  update(&mut self, now: f32)
+    {
+        let diff = now - self.last_timestamp;
+        self.fps = self.fps + (1.0 / diff - self.fps) * self.filter;
+        self.last_timestamp = now;
+    }
+
+    pub fn draw(&self, draw: &Draw, rect: nannou::geom::rect::Rect)
+    {
+        let text = format!("FPS: {:.1}", self.fps);
+        draw.text(&text).color(WHITE).font_size(18).align_top().xy(rect.bottom_left());
     }
 }

@@ -5,7 +5,7 @@ use std::sync::mpsc;
 
 use nanomsg::{Socket, Protocol, Error};
 use std::io::{Read};
-use ringbuf::{RingBuffer, Consumer, Producer};
+use ringbuf::{RingBuffer, Producer};
 
 
 mod messageparsing;
@@ -13,7 +13,7 @@ use messageparsing::{parse_message, SpiMessage};
 mod timetracking;
 use timetracking::PropellerTimeTracker;
 mod rendering;
-use rendering::{Point, ChannelGraph};
+use rendering::{Point, ChannelGraph, FPSCounter};
 
 
 fn connect_to_spi_daemon(addr: &str) -> Result<nanomsg::Socket, Error> {
@@ -50,7 +50,8 @@ struct Model {
     incoming: std::sync::mpsc::Receiver<SpiMessage>,
     time_tracker: PropellerTimeTracker,
     propeller_time: f32,
-    graph: ChannelGraph
+    graph: ChannelGraph,
+    fps: FPSCounter
 }
 
 fn model(app: &App) -> Model {
@@ -66,7 +67,8 @@ fn model(app: &App) -> Model {
         incoming: rx,
         time_tracker: PropellerTimeTracker::new(app.time),
         propeller_time: 0.0,
-        graph: ChannelGraph::new(cons)
+        graph: ChannelGraph::new(cons),
+        fps: FPSCounter::new(app.time, 0.05)
     };
 
     thread::spawn(move || {
@@ -106,6 +108,7 @@ fn update(app: &App, model: &mut Model, _update: Update) {
         }
     }
     model.graph.update(app.time);
+    model.fps.update(app.time);
 }
 
 
@@ -117,14 +120,16 @@ fn view(app: &App, model: &Model, frame: Frame) {
     draw.background().color(PURPLE);
 
     let text = format!(
-        "message count: {}, propeller timestamp: {}, bufsize: {}",
+        "message count: {}, propeller timestamp: {}, app timestamp: {}, bufsize: {}",
         model.message_count,
         model.propeller_time,
+        app.time,
         model.graph.len()
     );
 
-    draw.text(&text).color(WHITE).font_size(24).wh(win_rect.wh());
+    //draw.text(&text).color(WHITE).font_size(24).wh(win_rect.wh());
 
     model.graph.draw(&draw, win_rect, app.time);
+    model.fps.draw(&draw, win_rect);
     draw.to_frame(app, &frame).unwrap();
 }
