@@ -67,7 +67,7 @@ fn model(app: &App) -> Model {
         incoming: rx,
         time_tracker: PropellerTimeTracker::new(app.time),
         propeller_time: 0.0,
-        graph: ChannelGraph::new(cons),
+        graph: ChannelGraph::new(cons, 0.3),
         fps: FPSCounter::new(app.time, 0.05)
     };
 

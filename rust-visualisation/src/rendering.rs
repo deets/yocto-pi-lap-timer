@@ -3,7 +3,7 @@ use nannou::draw::Draw;
 
 use ringbuf::{Consumer};
 
-const TIMERANGE:f32 = 2.0;
+const TIMERANGE:f32 = 3.0;
 
 pub struct Point {
     pub timestamp: f32,
@@ -13,24 +13,28 @@ pub struct Point {
 pub struct ChannelGraph
 {
     points: Consumer<Point>,
-    then: f32
+    then: f32,
+    buffer_time: f32
 }
 
 impl ChannelGraph {
 
-    pub fn new(points: Consumer<Point>) -> ChannelGraph
+    pub fn new(points: Consumer<Point>, buffer_time: f32 ) -> ChannelGraph
     {
-        ChannelGraph{ points: points, then: 0.0 }
+        ChannelGraph{ points: points, then: 0.0 , buffer_time: buffer_time }
     }
 
     pub fn update(&mut self, t: f32)
     {
         // cull the points too old
-        self.then = t - TIMERANGE;
+        self.then = t - TIMERANGE - self.buffer_time;
         let then = self.then;
+        let buffer_time = self.buffer_time;
         self.points.pop_each(
             |point| -> bool {
-                point.timestamp < then
+                // the buffer_time is used here to keep a few
+                // datapoints beyond the actualy displayed range
+                point.timestamp < then - buffer_time
             },
             None
         );
@@ -46,9 +50,12 @@ impl ChannelGraph {
 
         self.points.for_each(
             |point| {
-                let x = map_range(point.timestamp, self.then, now, rect.left(), rect.right());
-                let y = map_range(point.value as f32, 0.0, 1024.0, rect.bottom() * 0.75, rect.top() * 0.75);
-                vertices.push((pt2(x, y), srgba(r, g, b, 1.0)));
+                let x = map_range(point.timestamp, self.then, now - self.buffer_time, 0.0, 1.0);
+                if (0.0..1.0).contains(&x) {
+                    let x = rect.left() + rect.w() * x;
+                    let y = map_range(point.value as f32, 0.0, 1024.0, rect.bottom() * 0.75, rect.top() * 0.75);
+                    vertices.push((pt2(x, y), srgba(r, g, b, 1.0)));
+                }
             }
             );
 
