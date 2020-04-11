@@ -85,6 +85,11 @@ int main(int argc, char *argv[])
   }
   SPIConnection connection(args.device);
   Transmitter tx(args.uri, configuration, args.thinning);
+  Hub hub;
+
+  hub.register_listener(tx);
+
+  hub.start();
   tx.start();
 
   const auto period = 1000000us / args.samplerate;
@@ -107,7 +112,7 @@ int main(int argc, char *argv[])
     {
       const auto& result = connection.xfer(output_data);
       datagram.from_byte_array(result);
-      if(datagram && !tx.push(datagram))
+      if(datagram && !hub.push(datagram))
       {
         std::cerr << "queue overflow, aborting.\n";
         abort();

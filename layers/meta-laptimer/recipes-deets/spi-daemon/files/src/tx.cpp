@@ -1,6 +1,5 @@
 // Copyright: 2020, Diez B. Roggisch, Berlin, all rights reserved
 #include "tx.hpp"
-#include "realtime.h"
 
 #include <nanomsg/nn.h>
 #include <nanomsg/pair.h>
@@ -9,10 +8,11 @@
 #include <chrono>
 #include <sstream>
 
+namespace {
+
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>; // not needed as of C++20
 
-namespace {
 
 const auto INPUT_QUEUE_SIZE = 100;
 const auto SPI_STATISTICS_INTERVAL = 4000; // divide by samplerate
@@ -20,9 +20,8 @@ const auto SPI_STATISTICS_INTERVAL = 4000; // divide by samplerate
 } // end ns anonymous
 
 Transmitter::Transmitter(const std::string& uri, SPIDatagram& configuration, int thinning)
-  : _queue(QUEUE_SIZE)
+  : _configuration(configuration)
   , _input_queue(INPUT_QUEUE_SIZE)
-  , _configuration(configuration)
   , _thinning(thinning)
 {
   _socket = nn_socket(AF_SP, NN_PAIR);
@@ -65,90 +64,36 @@ Transmitter::Transmitter(const std::string& uri, SPIDatagram& configuration, int
   }
 }
 
-void Transmitter::send_loop()
+void Transmitter::consume(const Hub::item_t& item)
 {
   using namespace std::chrono_literals;
-  set_priority(70, SCHED_RR);
 
-  uint64_t total_counter = 0;
-  uint64_t sent_counter = 0;
-  while(true)
+  std::stringstream s;
+
+  ++_total_counter;
+
+  const auto& [timestamp, datagram] = item;
+  if(_total_counter % _thinning == 0)
   {
-    const auto qsize = _queue.size_approx();
-    for(int i=0; i < qsize; ++i)
-    {
-      std::stringstream s;
-      output_queue_t::value_type item;
-      _queue.try_dequeue(item);
-      ++total_counter;
-      const auto [timestamp, datagram] = item;
-      if(datagram)
-      {
-        if(total_counter % _thinning == 0)
-        {
-          s << "D" << datagram << "\n";
-          ++sent_counter;
-        }
-        do_statistics(datagram);
-      }
-      do_spi_statistics(timestamp);
-      if((sent_counter % (SPI_STATISTICS_INTERVAL / _thinning)) == 0)
-      {
-        s << "S" << get_statistics_line() << "\n";
-      }
-      const auto content = s.str();
-      if(content.size())
-      {
-        const auto err = nn_send(_socket, content.data(), content.size(), NN_DONTWAIT);
-        if(err == -1 && errno != EAGAIN)
-        {
-          std::cerr << "nn_send error: " << errno << "\n";
-        }
-      }
-    }
-    std::this_thread::sleep_for(100ms);
+    s << "D" << datagram << "\n";
+    ++_sent_counter;
   }
-}
+  do_statistics(datagram);
+  do_spi_statistics(timestamp);
 
-void Transmitter::recv_loop()
-{
-  std::array<char, 2048> buffer;
-
-
-  while(true)
+  if((_sent_counter % (SPI_STATISTICS_INTERVAL / _thinning)) == 0)
   {
-    const auto nbytes = nn_recv(_socket, buffer.data(), buffer.size(), 0);
-    if(nbytes < 0)
-    {
-    }
-    else if(nbytes > 0)
-    {
-      std::string_view msg(buffer.data(), nbytes);
-      const auto command = parse(msg);
-      if(!std::holds_alternative<no_cmd_t>(command))
-      {
-        const auto result = _input_queue.try_enqueue(command);
-        // assert(result);
-        // std::cout << "got command " << msg << "q size:" << _input_queue.size_approx() << "\n";
-      }
-    }
-    else
-    {
-      std::cerr << "spurious recv!\n";
-    }
+    s << "S" << get_statistics_line() << "\n";
   }
-}
-
-void Transmitter::start()
-{
-  _writer_thread = std::thread([this]() { this->send_loop(); });
-  _reader_thread = std::thread([this]() { this->recv_loop(); });
-}
-
-
-bool Transmitter::push(const SPIDatagram& datagram)
-{
-  const auto res = _queue.try_enqueue({std::chrono::steady_clock::now(), datagram});
+  const auto content = s.str();
+  if(content.size())
+  {
+    const auto err = nn_send(_socket, content.data(), content.size(), NN_DONTWAIT);
+    if(err == -1 && errno != EAGAIN)
+    {
+      std::cerr << "nn_send error: " << errno << "\n";
+      }
+  }
 
   for(auto i=0; i < _input_queue.size_approx(); ++i)
   {
@@ -161,8 +106,13 @@ bool Transmitter::push(const SPIDatagram& datagram)
         [](auto arg) { }
       }, command);
   }
-  return res;
 }
+
+void Transmitter::start()
+{
+  _reader_thread = std::thread([this]() { this->recv_loop(); });
+}
+
 
 void Transmitter::do_statistics(const SPIDatagram& item)
 {
@@ -193,10 +143,40 @@ std::string Transmitter::get_statistics_line() const
 }
 
 
-void Transmitter::do_spi_statistics(const ts_t& spi_ts)
+void Transmitter::do_spi_statistics(const time_point_t& spi_ts)
 {
   using namespace std::chrono_literals;
 
   _stats.spi_max_diff = (spi_ts - _stats.spi_last_timestamp) / 1us;
   _stats.spi_last_timestamp = spi_ts;
+}
+
+
+void Transmitter::recv_loop()
+{
+  std::array<char, 2048> buffer;
+
+
+  while(true)
+  {
+    const auto nbytes = nn_recv(_socket, buffer.data(), buffer.size(), 0);
+    if(nbytes < 0)
+    {
+    }
+    else if(nbytes > 0)
+    {
+      std::string_view msg(buffer.data(), nbytes);
+      const auto command = parse(msg);
+      if(!std::holds_alternative<no_cmd_t>(command))
+      {
+        const auto result = _input_queue.try_enqueue(command);
+        // assert(result);
+        // std::cout << "got command " << msg << "q size:" << _input_queue.size_approx() << "\n";
+      }
+    }
+    else
+    {
+      std::cerr << "spurious recv!\n";
+    }
+  }
 }

@@ -1,8 +1,7 @@
 // Copyright: 2020, Diez B. Roggisch, Berlin, all rights reserved
 #pragma once
 
-#include "datagram.h"
-#include "parser.hpp"
+#include "hub.hpp"
 
 #include "readerwriterqueue.h"
 
@@ -10,14 +9,12 @@
 #include <chrono>
 #include <tuple>
 
-using ts_t = decltype(std::chrono::steady_clock::now());
-
 struct TXStatistics
 {
   int64_t last_timestamp = -1;
   int64_t max_diff = 0;
-  ts_t start = std::chrono::steady_clock::now();
-  ts_t spi_last_timestamp;
+  time_point_t start = std::chrono::steady_clock::now();
+  time_point_t spi_last_timestamp;
   int64_t spi_max_diff;
 };
 
@@ -27,15 +24,14 @@ public:
   Transmitter(const std::string& uri, SPIDatagram& configuration, int thinning);
 
   void start();
-  bool push(const SPIDatagram&);
+  void consume(const Hub::item_t& item);
 
 private:
-  using output_queue_t = moodycamel::ReaderWriterQueue<std::tuple<ts_t, SPIDatagram>>;
   using input_queue_t = moodycamel::ReaderWriterQueue<parse_result_t>;
-  void send_loop();
+
   void recv_loop();
   void do_statistics(const SPIDatagram&);
-  void do_spi_statistics(const ts_t&);
+  void do_spi_statistics(const time_point_t&);
   std::string get_statistics_line() const;
 
   int _thinning;
@@ -43,11 +39,12 @@ private:
   int _endpoint;
   SPIDatagram& _configuration;
 
-  output_queue_t _queue;
+  TXStatistics _stats;
+
+  std::thread _reader_thread;
   input_queue_t _input_queue;
 
-  std::thread _writer_thread;
-  std::thread _reader_thread;
+  uint64_t _total_counter = 0;
+  uint64_t _sent_counter = 0;
 
-  TXStatistics _stats;
 };

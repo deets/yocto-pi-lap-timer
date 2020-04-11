@@ -9,9 +9,12 @@ add_executable(
   spi-daemon
   src/arguments.cpp
   src/datagram.cpp
+  src/hub.cpp
   src/parser.cpp
   src/realtime.cpp
+  src/rotorhazard.cpp
   src/spi-daemon.cpp
+  src/timetracker.cpp
   src/tx.cpp
   )
 
