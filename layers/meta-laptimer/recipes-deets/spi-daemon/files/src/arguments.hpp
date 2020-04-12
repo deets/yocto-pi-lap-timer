@@ -7,6 +7,7 @@ struct arguments_t
   int thinning;
   std::string device;
   std::string uri;
+  std::string rh_uri;
 };
 
 arguments_t parse_args(int argc, char* argv[]);

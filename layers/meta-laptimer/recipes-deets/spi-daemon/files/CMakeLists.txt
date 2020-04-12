@@ -10,6 +10,7 @@ add_executable(
   src/arguments.cpp
   src/datagram.cpp
   src/hub.cpp
+  src/nanomsg-helper.cpp
   src/parser.cpp
   src/realtime.cpp
   src/rotorhazard.cpp
@@ -21,7 +22,7 @@ add_executable(
 
 target_compile_features(spi-daemon PRIVATE cxx_std_17)
 target_link_libraries(spi-daemon PRIVATE nanomsg pthread)
-target_compile_options(spi-daemon PRIVATE -fconcepts)
+target_compile_options(spi-daemon PRIVATE -fconcepts -Wno-psabi)
 
 install(TARGETS spi-daemon RUNTIME DESTINATION ${DESTDIR}/usr/bin)
 

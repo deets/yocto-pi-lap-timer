@@ -12,6 +12,7 @@ arguments_t parse_args(int argc, char* argv[])
   ("t,thinning", "skip T samples for network transfer", cxxopts::value<int>()->default_value("10"))
   ("d,device", "SPI device to use", cxxopts::value<std::string>()->default_value("/dev/spidev0.0"))
   ("u,uri", "URI to bind to with nanomsg", cxxopts::value<std::string>()->default_value("tcp://0.0.0.0:5000"))
+  ("r,rhuri", "URI for RotorHazard to bind to with nanomsg", cxxopts::value<std::string>()->default_value("tcp://0.0.0.0:8000"))
   ("h,help", "Print usage")
   ;
   auto result = options.parse(argc, argv);
@@ -25,7 +26,8 @@ arguments_t parse_args(int argc, char* argv[])
     result["samplerate"].as<int>(),
     result["thinning"].as<int>(),
     result["device"].as<std::string>(),
-    result["uri"].as<std::string>()
+    result["uri"].as<std::string>(),
+    result["rhuri"].as<std::string>()
   };
 
   return res;

@@ -1,5 +1,9 @@
 
 #include "rotorhazard.hpp"
+#include "nanomsg-helper.hpp"
+#include "realtime.h"
+
+#include <nanomsg/nn.h>
 
 #include <algorithm>
 
@@ -274,10 +278,8 @@ void RotorHazardNode::rssiEndCrossing()
   state.passRssiNadir = MAX_RSSI;
 }
 
-std::vector<uint8_t> RotorHazardNode::readLapStats(time_point_t now)
+void RotorHazardNode::readLapStats(time_point_t now, std::vector<uint8_t>& buffer)
 {
-  std::vector<uint8_t> buffer;
-
   ioBufferWrite8(buffer, lastPass.lap);
   ioBufferWrite16(buffer, uint16_t((now - lastPass.timestamp) / 1ms));  // ms since lap
   ioBufferWriteRssi(buffer, state.rssi);
@@ -317,6 +319,62 @@ std::vector<uint8_t> RotorHazardNode::readLapStats(time_point_t now)
     ioBufferWrite16(buffer, 0);
     ioBufferWrite16(buffer, 0);
   }
+}
 
-  return buffer;
+
+//////////////////////////////////////////////////////////////////////
+
+RotorHazardControllor::RotorHazardControllor(const std::string& uri, SPIDatagram& configuration, int node_number, time_point_t start_time)
+  : _configuration(configuration)
+{
+  for(int i=0; i < node_number; ++i)
+  {
+    _nodes.emplace_back(start_time);
+  }
+  const auto [socket, endpoint] = open_nanomsg_pair_server(uri);
+  _socket = socket;
+  _endpoint = endpoint;
+}
+
+
+void RotorHazardControllor::consume(const Hub::item_t& item)
+{
+  const auto& [timestamp, datagram] = item;
+  for(int i=0; i < _nodes.size(); ++i)
+  {
+    // our payload is
+    // timestamp, node 0, node 1, ...
+    // and we sample with 10 bit, meaning we have
+    // to shift the value by two bits.
+    _nodes[i].rssiProcess(datagram.payload[1 + i] << 2, timestamp);
+  }
+}
+
+
+void RotorHazardControllor::start()
+{
+  _thread = std::thread([this]() { this->loop(); });
+}
+
+
+void RotorHazardControllor::loop()
+{
+  using namespace std::chrono_literals;
+  using sck = std::chrono::steady_clock;
+
+  set_priority(70, SCHED_RR);
+
+  while(true)
+  {
+    const auto now = sck::now();
+    _buffer.clear();
+    _buffer.push_back('L');
+    for(auto& node : _nodes)
+    {
+      node.readLapStats(now, _buffer);
+    }
+    const auto err = nn_send(_socket, _buffer.data(), _buffer.size(), NN_DONTWAIT);
+    // this is from the RH code
+    std::this_thread::sleep_for(100ms);
+  }
 }

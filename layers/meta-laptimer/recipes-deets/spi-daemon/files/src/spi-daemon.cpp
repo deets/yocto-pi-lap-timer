@@ -2,6 +2,7 @@
 #include "tx.hpp"
 #include "realtime.h"
 #include "arguments.hpp"
+#include "rotorhazard.hpp"
 
 #include <linux/spi/spidev.h>
 #include <time.h>
@@ -85,11 +86,14 @@ int main(int argc, char *argv[])
   }
   SPIConnection connection(args.device);
   Transmitter tx(args.uri, configuration, args.thinning);
+  RotorHazardControllor rhc(args.rh_uri, configuration, 1, sck::now());
   Hub hub;
 
   hub.register_listener(tx);
+  hub.register_listener(rhc);
 
   hub.start();
+  rhc.start();
   tx.start();
 
   const auto period = 1000000us / args.samplerate;

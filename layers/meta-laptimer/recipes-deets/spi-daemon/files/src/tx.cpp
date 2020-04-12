@@ -1,12 +1,12 @@
 // Copyright: 2020, Diez B. Roggisch, Berlin, all rights reserved
 #include "tx.hpp"
+#include "nanomsg-helper.hpp"
 
 #include <nanomsg/nn.h>
-#include <nanomsg/pair.h>
-
 #include <iostream>
 #include <chrono>
 #include <sstream>
+
 
 namespace {
 
@@ -24,44 +24,9 @@ Transmitter::Transmitter(const std::string& uri, SPIDatagram& configuration, int
   , _input_queue(INPUT_QUEUE_SIZE)
   , _thinning(thinning)
 {
-  _socket = nn_socket(AF_SP, NN_PAIR);
-  assert(_socket >= 0);
-  _endpoint = nn_bind (_socket, uri.c_str());
-  if(_endpoint == -1)
-  {
-    std::cerr << "nn_bind error: " << errno << "\n";
-    switch(errno)
-    {
-    case EBADF:
-      std::cerr << "errno: EBADF\n";
-      break;
-    case EMFILE:
-      std::cerr << "errno: EMFILE\n";
-      break;
-    case EINVAL:
-      std::cerr << "errno: EINVAL\n";
-      break;
-    case ENAMETOOLONG:
-      std::cerr << "errno: ENAMETOOLONG\n";
-      break;
-    case EPROTONOSUPPORT:
-      std::cerr << "errno: EPROTONOSUPPORT\n";
-      break;
-    case EADDRNOTAVAIL:
-      std::cerr << "errno: EADDRNOTAVAIL\n";
-      break;
-    case ENODEV:
-      std::cerr << "errno: ENODEV\n";
-      break;
-    case EADDRINUSE:
-      std::cerr << "errno: EADDRINUSE\n";
-      break;
-    case ETERM:
-      std::cerr << "errno: ETERM\n";
-      break;
-    }
-    assert(false);
-  }
+  const auto [socket, endpoint] = open_nanomsg_pair_server(uri);
+  _socket = socket;
+  _endpoint = endpoint;
 }
 
 void Transmitter::consume(const Hub::item_t& item)

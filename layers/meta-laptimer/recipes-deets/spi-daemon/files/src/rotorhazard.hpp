@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FastRunningMedian.hpp"
+#include "hub.hpp"
 
 #include <vector>
 #include <cstdint>
@@ -91,7 +92,7 @@ public:
   bool rssiProcess(rssi_t rssi, time_point_t millis);
   void rssiEndCrossing();
 
-  std::vector<uint8_t> readLapStats(time_point_t now);
+  void readLapStats(time_point_t now, std::vector<uint8_t>&);
 
 private:
   void initExtremum(Extremum *e);
@@ -106,5 +107,27 @@ private:
   struct State state;
   struct History history;
   struct LastPass lastPass;
+
+};
+
+class RotorHazardControllor {
+public:
+  RotorHazardControllor(const std::string& uri, SPIDatagram& configuration, int node_number, time_point_t start_time);
+
+  void start();
+
+  void consume(const Hub::item_t& item);
+
+private:
+  void loop();
+
+  std::vector<RotorHazardNode> _nodes;
+
+  int _socket;
+  int _endpoint;
+  SPIDatagram& _configuration;
+  std::thread _thread;
+
+  std::vector<uint8_t> _buffer;
 
 };
