@@ -57,7 +57,7 @@ void Transmitter::consume(const Hub::item_t& item)
     if(err == -1 && errno != EAGAIN)
     {
       std::cerr << "nn_send error: " << errno << "\n";
-      }
+    }
   }
 
   for(auto i=0; i < _input_queue.size_approx(); ++i)

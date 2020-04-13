@@ -82,7 +82,8 @@ struct LastPass
 class RotorHazardNode {
 public:
 
-  RotorHazardNode(time_point_t);
+  static const int CONFIG_MESSAGE_SIZE = 4;
+  RotorHazardNode(time_point_t last_loop_micros, uint32_t& frequency, uint8_t enter_at, uint8_t exit_at);
 
   bool rssiStateValid();
   /**
@@ -91,8 +92,11 @@ public:
   void rssiStateReset();
   bool rssiProcess(rssi_t rssi, time_point_t millis);
   void rssiEndCrossing();
+  void setFrequency(uint32_t);
 
   void readLapStats(time_point_t now, std::vector<uint8_t>&);
+
+  void configure(const uint8_t*);
 
 private:
   void initExtremum(Extremum *e);
@@ -108,6 +112,8 @@ private:
   struct History history;
   struct LastPass lastPass;
 
+  uint32_t& _frequency;
+  uint8_t _enter_at, _exit_at;
 };
 
 class RotorHazardControllor {
@@ -120,6 +126,7 @@ public:
 
 private:
   void loop();
+  void read_configuration_messages();
 
   std::vector<RotorHazardNode> _nodes;
 

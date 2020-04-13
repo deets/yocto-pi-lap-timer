@@ -39,10 +39,23 @@ void ioBufferWriteExtremum(T& buf, Extremum *e, time_point_t now)
 
 } // end ns anonymous
 
-RotorHazardNode::RotorHazardNode(time_point_t last_loop_micros)
+RotorHazardNode::RotorHazardNode(time_point_t last_loop_micros, uint32_t& frequency, uint8_t enter_at, uint8_t exit_at)
+  : _frequency(frequency)
+  , _enter_at(enter_at)
+  , _exit_at(exit_at)
 {
     rssiMedian.init();
     state.lastloopMicros = last_loop_micros;
+    rssiStateReset();
+}
+
+void RotorHazardNode::setFrequency(uint32_t frequency)
+{
+  if(_frequency != frequency)
+  {
+    _frequency = frequency;
+    rssiStateReset();
+  }
 }
 
 bool RotorHazardNode::rssiStateValid()
@@ -319,8 +332,22 @@ void RotorHazardNode::readLapStats(time_point_t now, std::vector<uint8_t>& buffe
     ioBufferWrite16(buffer, 0);
     ioBufferWrite16(buffer, 0);
   }
+  // this is a diversion from the original - we write the enter/exit at
+  // levels because that's the one bit of information not conveyed
+  ioBufferWrite8(buffer, settings.enterAtLevel);
+  ioBufferWrite8(buffer, settings.exitAtLevel);
 }
 
+
+void RotorHazardNode::configure(const uint8_t* config_message)
+{
+  uint32_t frequency = 0;
+  std::memcpy(&frequency, config_message, 2);
+  _enter_at = config_message[2];
+  _exit_at = config_message[3];
+  setFrequency(frequency);
+  std::cout << "configured to freq: " << frequency << " enter_at: " << (int)_enter_at << " exit_at: " << (int)_exit_at << "\n";
+}
 
 //////////////////////////////////////////////////////////////////////
 
@@ -329,7 +356,12 @@ RotorHazardControllor::RotorHazardControllor(const std::string& uri, SPIDatagram
 {
   for(int i=0; i < node_number; ++i)
   {
-    _nodes.emplace_back(start_time);
+    // ATTENTION:
+    // There is a asymetry in the protocol here. The data we read back
+    // always contains a timestamp as first payload, and *then* the
+    // ADC readings. See consume(). Writing though takes the payload from index
+    // 0 to n - 1
+    _nodes.emplace_back(start_time, configuration.payload[i], 200, 100);
   }
   const auto [socket, endpoint] = open_nanomsg_pair_server(uri);
   _socket = socket;
@@ -363,7 +395,7 @@ void RotorHazardControllor::loop()
   using sck = std::chrono::steady_clock;
 
   set_priority(70, SCHED_RR);
-
+  auto when = sck::now();
   while(true)
   {
     const auto now = sck::now();
@@ -374,7 +406,40 @@ void RotorHazardControllor::loop()
       node.readLapStats(now, _buffer);
     }
     const auto err = nn_send(_socket, _buffer.data(), _buffer.size(), NN_DONTWAIT);
+    read_configuration_messages();
     // this is from the RH code
-    std::this_thread::sleep_for(100ms);
+    when += 100ms;
+    std::this_thread::sleep_for(when - sck::now());
+  }
+}
+
+void RotorHazardControllor::read_configuration_messages()
+{
+  while(true)
+  {
+    const auto nbytes = nn_recv(_socket, _buffer.data(), _buffer.size(), NN_DONTWAIT);
+    if(nbytes == -1)
+    {
+      if(errno != EAGAIN)
+      {
+        std::cerr << "nn_recv error: " << errno << "\n";
+      }
+      break;
+    }
+    else
+    {
+      std::cout << "got config message\n";
+      if(nbytes == 1 + RotorHazardNode::CONFIG_MESSAGE_SIZE * _nodes.size() && _buffer[0] == 'C')
+      {
+        for(int i=0; i < _nodes.size(); ++i)
+        {
+          _nodes[i].configure(&_buffer[1 + RotorHazardNode::CONFIG_MESSAGE_SIZE * i]);
+        }
+      }
+      else
+      {
+        std::cout << "Got spurious message\n";
+      }
+    }
   }
 }
