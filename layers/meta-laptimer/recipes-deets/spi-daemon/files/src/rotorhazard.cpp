@@ -47,6 +47,8 @@ RotorHazardNode::RotorHazardNode(time_point_t last_loop_micros, uint32_t& freque
     rssiMedian.init();
     state.lastloopMicros = last_loop_micros;
     rssiStateReset();
+    // we are always active
+    state.activatedFlag = true;
 }
 
 void RotorHazardNode::setFrequency(uint32_t frequency)
@@ -298,6 +300,7 @@ void RotorHazardNode::readLapStats(time_point_t now, std::vector<uint8_t>& buffe
   ioBufferWriteRssi(buffer, state.rssi);
   ioBufferWriteRssi(buffer, state.nodeRssiPeak);
   ioBufferWriteRssi(buffer, lastPass.rssiPeak);  // RSSI peak for last lap pass
+  // looptime micros
   ioBufferWrite16(buffer, uint16_t(1000));
   uint8_t flags = state.crossing ? (uint8_t)1 : (uint8_t)0;  // 'crossing' status
   if (isPeakValid(history.peakSend)
