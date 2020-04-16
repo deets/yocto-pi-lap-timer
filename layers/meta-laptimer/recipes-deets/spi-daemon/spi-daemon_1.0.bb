@@ -9,15 +9,31 @@ SRC_URI = "\
     file://LICENSE \
     file://CMakeLists.txt \
     file://LICENSE \
-    file://src/atomicops.h \
-    file://src/datagram.cpp \
-    file://src/datagram.h \
-    file://src/readerwriterqueue.h \
+    file://tests/tst_parser.cpp \
+    file://include/catch.hpp \
+    file://include/cxxopts.hpp \
     file://src/realtime.cpp \
-    file://src/realtime.h \
-    file://src/spi-daemon.cpp \
+    file://src/rotorhazard.hpp \
+    file://src/nanomsg-helper.hpp \
     file://src/tx.cpp \
-    file://src/tx.h \
+    file://src/parser.cpp \
+    file://src/timetracker.hpp \
+    file://src/nanomsg-helper.cpp \
+    file://src/hub.hpp \
+    file://src/timetracker.cpp \
+    file://src/hub.cpp \
+    file://src/spi-daemon.cpp \
+    file://src/realtime.h \
+    file://src/arguments.hpp \
+    file://src/tx.hpp \
+    file://src/datagram.h \
+    file://src/atomicops.h \
+    file://src/arguments.cpp \
+    file://src/readerwriterqueue.h \
+    file://src/rotorhazard.cpp \
+    file://src/FastRunningMedian.hpp \
+    file://src/datagram.cpp \
+    file://src/parser.hpp \
     "
 
 S="${WORKDIR}"
