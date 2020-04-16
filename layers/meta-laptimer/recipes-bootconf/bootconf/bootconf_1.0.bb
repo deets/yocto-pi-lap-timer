@@ -17,6 +17,7 @@ RDEPENDS_${PN} = "\
    python3-debugger\
    python3-misc\
    python3-pygobject\
+   python3-gpiozero \
 "
 
 inherit update-rc.d
