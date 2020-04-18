@@ -3,6 +3,29 @@
 # Copyright: 2020, Diez B. Roggisch, Berlin . All rights reserved.
 import io
 import ast
+import re
+import gpiozero
+
+
+def parse_config_number_spec(spec):
+    pins = []
+    for definition in spec.split(","):
+        definition = definition.strip()
+        m = re.match(r"(\d+)(L|H)", definition)
+        assert m
+        pin, active = m.groups()
+        pull_up = active == "L"
+        pins.append(
+            gpiozero.Button(
+                int(pin),
+                pull_up=pull_up,
+            )
+        )
+    return pins
+
+
+def evaluate_config_number(pins):
+    return sum(pin.value << i for i, pin in enumerate(pins))
 
 
 def load_conf(configfile):
