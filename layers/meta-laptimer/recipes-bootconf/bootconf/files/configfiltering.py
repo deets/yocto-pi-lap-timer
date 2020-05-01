@@ -5,25 +5,38 @@ import io
 import ast
 import re
 import gpiozero
+import logging
+from collections import namedtuple
 
 from gpiozero.pins.pigpio import PiGPIOFactory
 
 
+logger = logging.getLogger(__name__)
+
+
+NopButton = namedtuple("NopButton", "value")
+
+
 def parse_config_number_spec(spec):
-    pins = []
-    for definition in spec.split(","):
-        definition = definition.strip()
-        m = re.match(r"(\d+)(L|H)", definition)
-        assert m
-        pin, active = m.groups()
-        pull_up = active == "L"
-        pins.append(
-            gpiozero.Button(
-                int(pin),
-                pull_up=pull_up,
+    try:
+        logger.debug("parse_config_number_spec %s", spec)
+        pins = []
+        for definition in spec.split(","):
+            definition = definition.strip()
+            m = re.match(r"^(\d+)(L|H)$", definition)
+            assert m
+            pin, active = m.groups()
+            pull_up = active == "L"
+            pins.append(
+                gpiozero.Button(
+                    int(pin),
+                    pull_up=pull_up,
+                )
             )
-        )
-    return pins
+        return pins
+    except:
+        logger.exception("Error reading configuration spec %r", spec)
+        return [NopButton(0)]
 
 
 def evaluate_config_number(pins):
@@ -40,6 +53,8 @@ def load_conf(configfile):
 
 
 def filter_config(config, active_config):
+    active_config = str(active_config)
+
     def key_in_config(key):
         try:
             key, config = key.rsplit(":", 1)
@@ -64,14 +79,19 @@ def filter_config(config, active_config):
         return config
 
 
+def configuration_from_file_filtered_by_selection(config_file_or_buffer):
+    gpiozero.Device.pin_factory = PiGPIOFactory()
+    raw_config = load_conf(config_file_or_buffer)
+    spec = raw_config.get("config-selector")
+    pins = parse_config_number_spec(spec)
+    active_config = evaluate_config_number(pins)
+    logger.debug("active config: %i", active_config)
+    return filter_config(raw_config, active_config)
+
+
 if __name__ == '__main__':
     import sys
     import pprint
-    gpiozero.Device.pin_factory = PiGPIOFactory()
+    logging.basicConfig(level=logging.DEBUG)
     buf = io.StringIO(sys.stdin.read())
-    active_config = sys.argv[1]
-    pins = parse_config_number_spec("21H,20H")
-    no = evaluate_config_number(pins)
-    print(no)
-
-    pprint.pprint(filter_config(load_conf(buf), active_config))
+    pprint.pprint(configuration_from_file_filtered_by_selection(buf))
