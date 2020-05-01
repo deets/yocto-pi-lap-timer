@@ -6,6 +6,8 @@ import ast
 import re
 import gpiozero
 
+from gpiozero.pins.pigpio import PiGPIOFactory
+
 
 def parse_config_number_spec(spec):
     pins = []
@@ -65,6 +67,11 @@ def filter_config(config, active_config):
 if __name__ == '__main__':
     import sys
     import pprint
+    gpiozero.Device.pin_factory = PiGPIOFactory()
     buf = io.StringIO(sys.stdin.read())
     active_config = sys.argv[1]
+    pins = parse_config_number_spec("21H,20H")
+    no = evaluate_config_number(pins)
+    print(no)
+
     pprint.pprint(filter_config(load_conf(buf), active_config))

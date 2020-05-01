@@ -19,6 +19,7 @@ assert UDHCPD_CONF_FILENAME.exists()
 
 AUTHORIZED_KEYS = "/home/root/.ssh/authorized_keys"
 
+
 def safe_get(d, *path, default=None):
     sentinel = object()
     for p in path:
@@ -115,13 +116,13 @@ def main():
     loop = setup_mainloop()
 
     loop.create_task(
-        setup_hostname(
-            safe_get(config, "hostname", default="fpv-laptimer")
+        setup_authorized_keys(
+            safe_get(config, "authorized-keys", default=[])
         )
     )
     loop.create_task(
-        setup_authorized_keys(
-            safe_get(config, "authorized-keys", default=[])
+        setup_hostname(
+            safe_get(config, "hostname", default="fpv-laptimer")
         )
     )
     loop.create_task(
