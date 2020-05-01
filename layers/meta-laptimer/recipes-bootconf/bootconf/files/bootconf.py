@@ -70,11 +70,30 @@ async def setup_ap(ifname, hostname, network_config):
     logger.info("AP set up")
 
 
+async def setup_station(ifname, network_config):
+    logger.info("Setting up Station")
+    station_config = network_config["station"]
+    logger.debug("Station  config: %r", station_config)
+    bus = dbus.SystemBus()
+    networks = [
+        (
+            safe_get(entry, "ssid", default="undefined-ssid"),
+            safe_get(entry, "password", default=None),
+        )
+        for entry in station_config
+    ]
+    logger.debug("networks: %r", networks)
+    wpa_supplicant = wpasupplicant.WPASupplicant(bus, ifname)
+    wpa_supplicant.run_station(networks)
+
+
 @with_dbus
 async def setup_network(ifname, hostname, network_config):
     # always prioritise ap!
     if "ap" in network_config:
         await setup_ap(ifname, hostname, network_config)
+    elif "station" in network_config:
+        await setup_station(ifname, network_config)
 
 
 async def setup_authorized_keys(authorized_keys):
@@ -107,7 +126,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("config")
     opts = parser.parse_args()
-    config = configfiltering.load_conf(opts.config)
+    config = configfiltering.configuration_from_file_filtered_by_selection(
+        opts.config
+    )
     loglevel = safe_get(config, "loglevel", default="DEBUG")
     loglevel = getattr(logging, loglevel.upper())
     setup_logging(loglevel)
