@@ -15,6 +15,7 @@ CORE_IMAGE_EXTRA_INSTALL_append = "\
     iw \
     os-release \
     pigpio \
+    python3-pip \
     python3-tailon \
     rsync \
     screen \
