@@ -5,8 +5,8 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=4a2e7d8803dc38c927d4dc23b4cd3053"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
 
-SRC_URI = "git://github.com/deets/RotorHazard.git;branch=use-logging-module"
-SRCREV = "90d0988ecda67e49b143340e05c0a1f7a0752f5e"
+SRC_URI = "git://github.com/deets/RotorHazard.git;branch=master"
+SRCREV = "20236e1b83578f371b82dbe143570ab79ec469d6"
 
 SRC_URI[md5sum] = "0e3ed44ece1c489ed835d1b7047e349c"
 SRC_URI[sha256sum] = "13f9f196f330c7c2c5d7a5cf91af894110ca0215ac051b5844701f2bfd934d52"
@@ -17,7 +17,7 @@ SRC_URI_append = "\
 
 inherit deploy
 
-RDEPENDS_${PN} += "python python-flask python-nanomsg"
+RDEPENDS_${PN} += "python python-flask python-nanomsg python-pyserial"
 
 # This is needed because the subdirectory otherwise is PN-git
 S = "${WORKDIR}/git"
