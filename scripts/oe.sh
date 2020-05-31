@@ -26,11 +26,15 @@ MACHINES = [
 BASE = pathlib.Path(__file__).parent.parent.absolute().resolve()
 LAYERS = BASE / "layers"
 OE_CORE = LAYERS / "modules" / "openembedded-core"
+META_OPENEMBEDDED_LAYERS = LAYERS / "modules" / "meta-openembedded"
 BITBAKEDIR = LAYERS / "modules" / "bitbake"
 LAYERS = [
     str(LAYERS / "modules" / "meta-raspberrypi"),
     str(LAYERS / "modules" / "meta-qt5"),
     str(LAYERS / "meta-laptimer"),
+    str(META_OPENEMBEDDED_LAYERS / "meta-oe"),
+    str(META_OPENEMBEDDED_LAYERS / "meta-python"),
+    str(META_OPENEMBEDDED_LAYERS / "meta-networking"),
 ]
 WHITELIST = (
     "DL_DIR",

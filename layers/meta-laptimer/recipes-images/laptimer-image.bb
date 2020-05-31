@@ -18,6 +18,7 @@ CORE_IMAGE_EXTRA_INSTALL_append = "\
     python3-tailon \
     rsync \
     screen \
+    tcpdump \
     udev-extra-rules \
     userland \
     wpa-supplicant \

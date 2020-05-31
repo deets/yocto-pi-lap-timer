@@ -10,3 +10,6 @@
 [submodule "layers/modules/meta-qt5"]
 	path = layers/modules/meta-qt5
 	url = git@github.com:meta-qt5/meta-qt5.git
+[submodule "layers/modules/meta-openembedded"]
+	path = layers/modules/meta-openembedded
+	url = git@github.com:openembedded/meta-openembedded.git
