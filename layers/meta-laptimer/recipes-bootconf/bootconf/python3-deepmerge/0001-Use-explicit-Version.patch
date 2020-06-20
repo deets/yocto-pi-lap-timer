@@ -1,0 +1,26 @@
+From 2e0455ace499b59ab9c9cf45b6a9a1fc7489b49c Mon Sep 17 00:00:00 2001
+From: "Diez B. Roggisch" <deets@web.de>
+Date: Sat, 20 Jun 2020 17:57:43 +0200
+Subject: [PATCH] Use explicit Version
+
+---
+ setup.py | 3 +--
+ 1 file changed, 1 insertion(+), 2 deletions(-)
+ mode change 100644 => 100755 setup.py
+
+diff --git a/setup.py b/setup.py
+old mode 100644
+new mode 100755
+index edf0a92..0b8afdb
+--- a/setup.py
++++ b/setup.py
+@@ -17,8 +17,7 @@ install_requires = [
+ tests_require = []
+ 
+ setup(name='deepmerge',
+-      setup_requires=["vcver"],
+-      vcver={"is_release": is_release, "path": base},
++      version="0.1.0",
+       description='a toolset to deeply merge python dictionaries.',
+       long_description=open(README_PATH).read(),
+       author='Yusuke Tsutsumi',
