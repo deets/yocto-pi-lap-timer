@@ -13,9 +13,10 @@ SRC_URI[sha256sum] = "13f9f196f330c7c2c5d7a5cf91af894110ca0215ac051b5844701f2bfd
 
 SRC_URI_append = "\
     file://config.json \
+    file://rotorhazard\
     "
 
-inherit deploy
+inherit deploy update-rc.d
 
 RDEPENDS_${PN} += "python python-flask python-nanomsg python-pyserial"
 
@@ -24,9 +25,13 @@ S = "${WORKDIR}/git"
 
 FILES_${PN} += "/home/pi/RotorHazard/src"
 
+INITSCRIPT_NAME = "rotorhazard"
+INITSCRIPT_PARAMS = "start 90 5 3 2 . stop 01 0 1 6 ."
+
 do_install() {
     install -d ${D}/home/pi/RotorHazard/src
     cp -r ${S}/src ${D}/home/pi/RotorHazard/
+    install -Dm 0755 ${WORKDIR}/rotorhazard ${D}${sysconfdir}/init.d/rotorhazard
 }
 
 addtask deploy before do_build after do_install
