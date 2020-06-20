@@ -23,7 +23,7 @@ RDEPENDS_${PN} += "python python-flask python-nanomsg python-pyserial"
 # This is needed because the subdirectory otherwise is PN-git
 S = "${WORKDIR}/git"
 
-FILES_${PN} += "/home/pi/RotorHazard/src"
+FILES_${PN} += "/home/pi/RotorHazard/src /home/pi/RotorHazard/doc"
 
 INITSCRIPT_NAME = "rotorhazard"
 INITSCRIPT_PARAMS = "start 90 5 3 2 . stop 01 0 1 6 ."
@@ -31,6 +31,7 @@ INITSCRIPT_PARAMS = "start 90 5 3 2 . stop 01 0 1 6 ."
 do_install() {
     install -d ${D}/home/pi/RotorHazard/src
     cp -r ${S}/src ${D}/home/pi/RotorHazard/
+    cp -r ${S}/doc ${D}/home/pi/RotorHazard/
     install -Dm 0755 ${WORKDIR}/rotorhazard ${D}${sysconfdir}/init.d/rotorhazard
 }
 
