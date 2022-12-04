@@ -1,7 +1,7 @@
 DESCRIPTION = "spi daemon "
 SECTION = "devtools"
 LICENSE = "MIT"
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 LIC_FILES_CHKSUM = "file://LICENSE;md5=eecac97884d7374757727f363dfede69"
 
@@ -46,7 +46,7 @@ FILES_${PN} += "\
 
 DEPENDS = "nanomsg"
 
-do_install_append() {
+do_install:append() {
     install -d ${D}${bindir}
     install -m 0755 spi-daemon ${D}${bindir}
 }

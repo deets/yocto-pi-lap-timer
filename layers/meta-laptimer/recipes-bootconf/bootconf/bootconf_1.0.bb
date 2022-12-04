@@ -1,8 +1,8 @@
 LICENSE = "CLOSED"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
-SRC_URI_append = " \
+SRC_URI:append = " \
     file://bootconf.py\
     file://wpasupplicant.py\
     file://configfiltering.py\
@@ -10,7 +10,7 @@ SRC_URI_append = " \
     file://autostart-bootconf.sh\
 "
 
-RDEPENDS_${PN} = "\
+RDEPENDS:${PN} = "\
    python3-asyncio-glib\
    python3-core\
    python3-dbus\
@@ -28,9 +28,9 @@ INITSCRIPT_NAME = "bootconf"
 INITSCRIPT_PARAMS = "start 03 5 3 2 . stop 97 0 1 6 ."
 
 
-FILES_${PN}_append = " /opt/bootconf/* /home/root/.ssh"
+FILES:${PN}:append = " /opt/bootconf/* /home/root/.ssh"
 
-do_install_append () {
+do_install:append () {
     install -d ${D}/opt/bootconf
     install -m 0755 ${WORKDIR}/*.py ${D}/opt/bootconf
     install -d ${D}${sysconfdir}

@@ -1,5 +1,5 @@
 inherit setuptools3
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SUMMARY = "A tools to handle merging of nested data structures in python."
 SECTION = "devel/python"

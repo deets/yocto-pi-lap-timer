@@ -1,6 +1,6 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 # Ensure we have pgrep
-SRC_URI_append = "\
+SRC_URI:append = "\
     file://laptimer.cfg\
     "

@@ -1,14 +1,11 @@
 include rotorhazard-image.bb
 
-CORE_IMAGE_EXTRA_INSTALL_append = "\
+CORE_IMAGE_EXTRA_INSTALL:append = "\
     nanomsg \
     propman \
-    spi-daemon-autostart \
-    spi-laptimer \
-    stress-ng \
     "
 
 # pull in QT5 sdk
 inherit populate_sdk_qt5_base
 
-TOOLCHAIN_HOST_TASK_append = " nativesdk-qttools-tools"
+TOOLCHAIN_HOST_TASK:append = " nativesdk-qttools-tools"

@@ -1,7 +1,7 @@
 DESCRIPTION = "spi daemon "
 SECTION = "devtools"
 LICENSE = "MIT"
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 LIC_FILES_CHKSUM = "file://LICENSE;md5=eecac97884d7374757727f363dfede69"
 
@@ -24,7 +24,7 @@ FILES_${PN} += "\
 INITSCRIPT_NAME = "spi-daemon-init"
 INITSCRIPT_PARAMS = "start 80 5 3 2 . stop 01 0 1 6 ."
 
-do_install_append() {
+do_install:append() {
     install -d ${D}${bindir}
     install -m 0755 ${WORKDIR}/scripts/tune-priorities.py ${D}${bindir}
 

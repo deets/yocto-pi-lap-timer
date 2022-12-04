@@ -20,7 +20,6 @@ IMAGES = [
 
 MACHINES = [
     "raspberrypi3",
-    "raspberrypi2",
 ]
 
 BASE = pathlib.Path(__file__).parent.parent.absolute().resolve()
@@ -103,8 +102,8 @@ class BitBakery:
             p.mkdir(exist_ok=True)
 
     def whitelist_var(self, var):
-        self._env["BB_ENV_EXTRAWHITE"] = "{} {}".format(
-            self._env["BB_ENV_EXTRAWHITE"],
+        self._env["BB_ENV_PASSTHROUGH_ADDITIONS"] = "{} {}".format(
+            self._env["BB_ENV_PASSTHROUGH_ADDITIONS"],
             var,
         )
 

@@ -1,7 +1,7 @@
 SUMMARY = "Upload the propeller binary to the propeller at system-start"
 LICENSE = "CLOSED"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 DEPENDS += "propman"
 
