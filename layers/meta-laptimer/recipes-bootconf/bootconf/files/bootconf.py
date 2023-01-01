@@ -113,7 +113,9 @@ async def setup_hostname(hostname):
 def setup_mainloop():
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
     asyncio.set_event_loop_policy(asyncio_glib.GLibEventLoopPolicy())
-    return asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    return loop
 
 
 def setup_logging(loglevel):
@@ -132,6 +134,7 @@ def main():
     loglevel = safe_get(config, "loglevel", default="DEBUG")
     loglevel = getattr(logging, loglevel.upper())
     setup_logging(loglevel)
+
 
     logger.debug("config %r", config)
     loop = setup_mainloop()
