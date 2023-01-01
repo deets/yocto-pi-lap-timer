@@ -13,4 +13,4 @@ SRC_URI[sha256sum] = "fe3ceb2ba5f541330c07ca1bd7ae792468d625bad1acf5354a3a7a0b9f
 
 BBCLASSEXTEND = "native nativesdk"
 
-RDEPENDS_${PN} += "python3-pygobject python3-asyncio"
+RDEPENDS:${PN} += "python3-pygobject python3-asyncio"

@@ -8,7 +8,7 @@ LIC_FILES_CHKSUM = "file://LICENSE.rst;md5=96cd08cadd8a35cf94fc1770ee0743da"
 
 inherit pypi
 
-RDEPENDS_${PN} = "\
+RDEPENDS:${PN} = "\
      python3-colorzero \
 "
 

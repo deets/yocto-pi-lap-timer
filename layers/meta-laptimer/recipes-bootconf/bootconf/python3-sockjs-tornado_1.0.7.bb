@@ -13,4 +13,4 @@ SRC_URI[sha256sum] = "02ff25466b3a46b1a7dbe477340b042770ac078de7ea475a6285a28a75
 
 BBCLASSEXTEND = "native nativesdk"
 
-RDEPENDS_${PN} += "python3-tornado"
+RDEPENDS:${PN} += "python3-tornado"

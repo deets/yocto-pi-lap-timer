@@ -15,7 +15,7 @@ S="${WORKDIR}"
 
 inherit update-rc.d
 
-RDEPENDS_${PN} = "spi-daemon python3-core"
+RDEPENDS:${PN} = "spi-daemon python3-core"
 
 FILES_${PN} += "\
     ${bindir}/tune-priorities.py \

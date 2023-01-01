@@ -20,6 +20,6 @@ do_install:append() {
     install -Dm 0755 ${WORKDIR}/tailon ${D}${sysconfdir}/init.d/tailon
 }
 
-RDEPENDS_${PN}:append = " python3-pyyaml python3-sockjs-tornado python3-tornado-http-auth python3-deepmerge"
+RDEPENDS:${PN}:append = " python3-pyyaml python3-sockjs-tornado python3-tornado-http-auth python3-deepmerge"
 
 BBCLASSEXTEND = "native nativesdk"
