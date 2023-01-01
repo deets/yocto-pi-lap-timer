@@ -13,15 +13,15 @@ SRCREV = "bab05ceb972f792c5acec04ed04f55b57ac62b11"
 
 S = "${WORKDIR}/git"
 
-inherit pkgconfig cmake update-rc.d
+# Inheriting from python3-dir gives us the
+# PYTHON_BASEVERSION
+inherit pkgconfig cmake update-rc.d python3-dir
 
-RDEPENDS_${PN} = "python3"
-
-FILES:${PN} += "${bindir}/pigpiod\
+FILES:${PN}:append = "${bindir}/pigpiod\
     ${libdir}/libpigpio.so\
     ${libdir}/libpigpiod_if.so\
     ${libdir}/libpigpiod_if2.so\
-    ${libdir}/python3.7/site-packages/pigpio.py\
+    ${libdir}/python${PYTHON_BASEVERSION}/site-packages/pigpio.py\
 "
 
 FILES:${PN}-dev = "${includedir}"
@@ -32,13 +32,13 @@ INITSCRIPT_PARAMS = "start 01 5 3 2 . stop 99 0 1 6 ."
 do_install() {
     install -d ${D}${bindir}
     install -d ${D}${libdir}
-    install -d ${D}${libdir}/python3.7/site-packages
+    install -d ${D}${libdir}/python${PYTHON_BASEVERSION}/site-packages
 
     install -m 0755 pigpiod ${D}${bindir}
     install -m 0755 libpigpio.so ${D}${libdir}
     install -m 0755 libpigpiod_if.so ${D}${libdir}
     install -m 0755 libpigpiod_if2.so ${D}${libdir}
-    install -m 0644 ${S}/pigpio.py ${D}${libdir}/python3.7/site-packages
+    install -m 0644 ${S}/pigpio.py ${D}${libdir}/python${PYTHON_BASEVERSION}/site-packages
 
     install -d ${D}${sysconfdir}/init.d
     install -m 0755 ${WORKDIR}/pigpiod.sh ${D}${sysconfdir}/init.d/pigpiod
