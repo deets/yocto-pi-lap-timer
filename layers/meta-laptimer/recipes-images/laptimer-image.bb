@@ -27,6 +27,9 @@ CORE_IMAGE_EXTRA_INSTALL:append = "\
 
 inherit extrausers
 
+# Password rotorhazard for root:
+# mkpasswd -m sha-512 rotorhazard -s "rotorhazard"
+# Don't forget to escape!
 EXTRA_USERS_PARAMS = " \
     usermod -p '\$6\$rotorhazard\$KH8j4pzn6P25yIQeNpurAAGEJhO7qu2A4/PP1nXSHWTtiHegb0mC50WeuuZZ9mgBMEaa8QLtaqf0UllmqAjC30' root \
 "
